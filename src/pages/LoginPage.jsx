@@ -2,7 +2,7 @@ import { useState } from "react";
 import { WC_TEAMS } from "../data/matches";
 import FlagImg from "../components/FlagImg";
 
-export default function LoginPage({ onLogin }) {
+export default function LoginPage({ onLogin, onViewLeaderboard  }) {
   const [name, setName] = useState("");
   const [selectedFlag, setSelectedFlag] = useState(null);
   const [search, setSearch] = useState("");
@@ -112,10 +112,18 @@ export default function LoginPage({ onLogin }) {
             ENTER THE TOURNAMENT ⚽
           </button>
 
+          <button
+  onClick={onViewLeaderboard}
+  className="mt-3 w-full border border-[#003F88] text-[#7BA3D4] font-bold py-3 rounded-xl hover:border-[#7BA3D4] hover:text-white transition-all"
+>
+  🏆 View Leaderboard
+</button>
+
           <p className="text-center text-[#4A6B8A] text-xs mt-3">
             Predictions lock after you submit — choose wisely!
           </p>
         </div>
+
       </div>
     </div>
   );

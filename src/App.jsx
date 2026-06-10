@@ -6,32 +6,27 @@ import LeaderboardPage from "./pages/LeaderboardPage";
 import { syncResults } from "./utils/resultsSync";
 import AdminPage from "./pages/AdminPage";
 
-// Initialize Firebase on load
 initFirebase();
 
 export default function App() {
-  const [page, setPage] = useState("login"); // login | predict | leaderboard | admin
-  const [player, setPlayer] = useState(null); // { name, avatarFlag }
+  const [page, setPage] = useState("login");
+  const [player, setPlayer] = useState(null);
   const [myPredictions, setMyPredictions] = useState(null);
   const [loading, setLoading] = useState(false);
 
-  // Check URL for admin route
   useEffect(() => {
     if (window.location.hash === "#admin") setPage("admin");
   }, []);
 
-
-useEffect(() => {
-  syncResults();
-  const interval = setInterval(syncResults, 5 * 60 * 1000); // sync every 5 min
-  return () => clearInterval(interval);
-}, []);
+  useEffect(() => {
+    syncResults();
+    const interval = setInterval(syncResults, 15 * 60 * 1000);
+    return () => clearInterval(interval);
+  }, []);
 
   const handleLogin = async (name, avatarFlag) => {
     const playerObj = { name, avatarFlag };
     setPlayer(playerObj);
-
-    // Immediately go to predict, then check in background if already submitted
     setPage("predict");
 
     try {
@@ -40,9 +35,12 @@ useEffect(() => {
         setMyPredictions(existing.predictions);
         setPage("leaderboard");
       }
-    } catch (e) {
-      // Firebase not set up yet — stay on predict page (demo mode)
-    }
+    } catch (e) {}
+  };
+
+  const handleViewLeaderboard = () => {
+    setPlayer({ name: "Guest", avatarFlag: { flag: "🏳️", name: "Guest", code: "GST", iso: "un" } });
+    setPage("leaderboard");
   };
 
   const handleSubmitted = (predictions) => {
@@ -66,26 +64,15 @@ useEffect(() => {
   }
 
   if (page === "login") {
-    return <LoginPage onLogin={handleLogin} />;
+    return <LoginPage onLogin={handleLogin} onViewLeaderboard={handleViewLeaderboard} />;
   }
 
   if (page === "predict") {
-    return (
-      <PredictPage
-        player={player}
-        onSubmitted={handleSubmitted}
-      />
-    );
+    return <PredictPage player={player} onSubmitted={handleSubmitted} />;
   }
 
   if (page === "leaderboard") {
-    return (
-      <LeaderboardPage
-        player={player}
-        myPredictions={myPredictions}
-        onBack={() => {}}
-      />
-    );
+    return <LeaderboardPage player={player} myPredictions={myPredictions} onBack={() => {}} />;
   }
 
   return null;
