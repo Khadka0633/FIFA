@@ -417,3 +417,67 @@ function ChatTab({ player, myEntry }) {
     </div>
   );
 }
+
+function PlayerPicksView({ player, results, highlight }) {
+  const totalResults = Object.keys(results).length;
+
+  return (
+    <div className={`bg-[#002657] border border-[#003F88] rounded-2xl p-4 ${highlight ? "mt-0" : "mt-2"}`}>
+      <div className="flex items-center gap-2 mb-4">
+        <FlagImg iso={player.avatarFlag?.iso} size={28} className="rounded-sm" />
+        <span className="text-white font-black">{player.name}'s Picks</span>
+        <div className="ml-auto flex items-center gap-3">
+          {totalResults > 0 && (
+            <span className="text-[#7BA3D4] text-xs">{player.correct}/{player.total} correct</span>
+          )}
+          <span className="text-[#FFD700] font-black">{player.score} pts</span>
+        </div>
+      </div>
+
+      {GROUPS.map((group) => {
+        const gMatches = GROUP_STAGE_MATCHES.filter((m) => m.group === group);
+        return (
+          <div key={group} className="mb-3">
+            <p className="text-[#FFD700] text-[10px] font-black uppercase tracking-widest mb-1.5">Group {group}</p>
+            {gMatches.map((match) => {
+              const pred = player.predictions?.[match.id];
+              const result = results[match.id];
+              const home = getTeam(match.home);
+              const away = getTeam(match.away);
+              const isCorrect = result && pred === result;
+
+              return (
+                <div key={match.id} className="flex items-center text-xs py-1.5 border-b border-[#003F88]/50 last:border-0 gap-1.5">
+                  <FlagImg iso={home.iso} size={16} className="rounded-sm flex-shrink-0" />
+                  <span className="text-[#4A6B8A] flex-shrink-0">{home.code} v {away.code}</span>
+                  <FlagImg iso={away.iso} size={16} className="rounded-sm flex-shrink-0" />
+                  <span className="flex-1" />
+                  {result ? (
+                    result === "DRAW"
+                      ? <span className="flex-shrink-0">🤝</span>
+                      : <FlagImg iso={getTeam(result).iso} size={16} className="rounded-sm flex-shrink-0" />
+                  ) : <span className="w-4 flex-shrink-0" />}
+                  {pred === "DRAW" ? (
+                    <span className="text-[#7BA3D4] flex-shrink-0">🤝 Draw</span>
+                  ) : pred ? (
+                    <>
+                      <FlagImg iso={getTeam(pred).iso} size={16} className="rounded-sm flex-shrink-0" />
+                      <span className="text-[#7BA3D4] font-medium flex-shrink-0">{getTeam(pred).code}</span>
+                    </>
+                  ) : (
+                    <span className="text-[#4A6B8A] flex-shrink-0">—</span>
+                  )}
+                  {result && (
+                    <span className={`font-black w-6 text-right flex-shrink-0 ${isCorrect ? "text-green-400" : "text-red-400"}`}>
+                      {isCorrect ? "+2" : "0"}
+                    </span>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
