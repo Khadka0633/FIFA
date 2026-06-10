@@ -3,6 +3,7 @@ import { initFirebase, getPlayerData } from "./utils/firebase";
 import LoginPage from "./pages/LoginPage";
 import PredictPage from "./pages/PredictPage";
 import LeaderboardPage from "./pages/LeaderboardPage";
+import { syncResults } from "./utils/resultsSync";
 import AdminPage from "./pages/AdminPage";
 
 // Initialize Firebase on load
@@ -18,6 +19,13 @@ export default function App() {
   useEffect(() => {
     if (window.location.hash === "#admin") setPage("admin");
   }, []);
+
+
+useEffect(() => {
+  syncResults();
+  const interval = setInterval(syncResults, 5 * 60 * 1000); // sync every 5 min
+  return () => clearInterval(interval);
+}, []);
 
   const handleLogin = async (name, avatarFlag) => {
     const playerObj = { name, avatarFlag };
