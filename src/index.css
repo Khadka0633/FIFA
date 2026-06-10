@@ -1,0 +1,79 @@
+@import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800;900&family=Barlow:wght@400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --fifa-blue: #003F88;
+  --fifa-dark: #001A3D;
+  --fifa-mid: #002657;
+  --fifa-gold: #FFD700;
+  --fifa-gold-dim: #FFC200;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  font-family: 'Barlow', sans-serif;
+  scroll-behavior: smooth;
+}
+
+h1, h2, h3, h4, .font-black, .font-bold {
+  font-family: 'Barlow Condensed', sans-serif;
+}
+
+body {
+  background-color: #001A3D;
+  color: white;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+::-webkit-scrollbar-track {
+  background: #001A3D;
+}
+::-webkit-scrollbar-thumb {
+  background: #003F88;
+  border-radius: 2px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #FFD700;
+}
+
+/* Hide scrollbar utility */
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+.scrollbar-none {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Bounce in animation for toast */
+@keyframes bounce-in {
+  0% { transform: translateX(-50%) translateY(20px); opacity: 0; }
+  60% { transform: translateX(-50%) translateY(-4px); opacity: 1; }
+  100% { transform: translateX(-50%) translateY(0); opacity: 1; }
+}
+
+.animate-bounce-in {
+  animation: bounce-in 0.35s ease-out forwards;
+}
+
+/* Pitch texture overlay */
+.pitch-bg {
+  background-image: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 40px,
+    rgba(255,255,255,0.015) 40px,
+    rgba(255,255,255,0.015) 42px
+  );
+}
