@@ -72,7 +72,7 @@ export default function App() {
   }
 
   if (page === "leaderboard") {
-    return <LeaderboardPage player={player} myPredictions={myPredictions} onBack={() => {}} />;
+    return <LeaderboardPage player={player} myPredictions={myPredictions} onBack={() => setPage("login")} />;
   }
 
   return null;

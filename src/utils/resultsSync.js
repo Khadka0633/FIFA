@@ -23,9 +23,9 @@ const TEAM_NAME_TO_CODE = {
 export const syncResults = async () => {
   try {
     const res = await fetch(
-      `https://api.football-data.org/v4/competitions/${WC_COMPETITION_ID}/matches?status=FINISHED`,
-      { headers: { "X-Auth-Token": API_KEY } }
-    );
+  `https://corsproxy.io/?${encodeURIComponent(`https://api.football-data.org/v4/competitions/${WC_COMPETITION_ID}/matches?status=FINISHED`)}`,
+  { headers: { "X-Auth-Token": API_KEY } }
+);
     const data = await res.json();
     const matches = data.matches;
 

@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { getAllPlayers, getResults } from "../utils/firebase";
 import { buildLeaderboard } from "../utils/scoring";
-import { GROUP_STAGE_MATCHES, getTeam } from "../data/matches";
+import { GROUP_STAGE_MATCHES, getTeam, GROUPS } from "../data/matches";
+import FlagImg from "../components/FlagImg";
 
 const MEDAL = ["🥇", "🥈", "🥉"];
 
@@ -43,7 +44,16 @@ export default function LeaderboardPage({ player, myPredictions, onBack }) {
             <span className="text-xl">{player.avatarFlag.flag}</span>
             <span className="text-[#7BA3D4] text-sm font-medium">{player.name}</span>
           </div>
+
+                 <button
+  onClick={onBack}
+  className="text-[#4A6B8A] hover:text-white text-sm transition-colors"
+>
+  ← Back
+</button>
         </div>
+
+ 
 
         {/* Tabs */}
         <div className="max-w-2xl mx-auto px-4 pb-3 flex gap-2">
@@ -146,7 +156,7 @@ export default function LeaderboardPage({ player, myPredictions, onBack }) {
 }
 
 function PlayerPicksView({ player, results, highlight }) {
-  const { GROUP_STAGE_MATCHES, GROUPS, getTeam } = require("../data/matches");
+
 
   return (
     <div className={`mt-4 bg-[#002657] border border-[#003F88] rounded-2xl p-4 ${highlight ? "" : "mt-2"}`}>
@@ -169,18 +179,23 @@ function PlayerPicksView({ player, results, highlight }) {
               const isWrong = result && pred !== result;
               return (
                 <div key={match.id} className="flex items-center gap-1.5 text-xs py-1 border-b border-[#003F88]/50 last:border-0">
-                  <span>{home.flag}</span>
-                  <span className="text-[#4A6B8A] flex-1 truncate">{home.code} v {away.code}</span>
-                  <span>{away.flag}</span>
-                  <span className="ml-2 text-[#7BA3D4] font-medium min-w-[48px] text-right">
-                    {pred === "DRAW" ? "🤝 Draw" : pred ? `${getTeam(pred).flag} ${getTeam(pred).code}` : "—"}
-                  </span>
-                  {result && (
-                    <span className={`ml-1 font-black ${isCorrect ? "text-green-400" : "text-red-400"}`}>
-                      {isCorrect ? "+2" : "0"}
-                    </span>
-                  )}
-                </div>
+  <FlagImg iso={home.iso} size={16} className="rounded-sm" />
+  <span className="text-[#4A6B8A] flex-1 truncate">{home.code} v {away.code}</span>
+  <FlagImg iso={away.iso} size={16} className="rounded-sm" />
+  <span className="ml-2 text-[#7BA3D4] font-medium min-w-[48px] text-right">
+    {pred === "DRAW" ? "🤝 Draw" : pred ? (
+      <span className="flex items-center gap-1 justify-end">
+        <FlagImg iso={getTeam(pred).iso} size={16} className="rounded-sm" />
+        {getTeam(pred).code}
+      </span>
+    ) : "—"}
+  </span>
+  {result && (
+    <span className={`ml-1 font-black ${isCorrect ? "text-green-400" : "text-red-400"}`}>
+      {isCorrect ? "+2" : "0"}
+    </span>
+  )}
+</div>
               );
             })}
           </div>

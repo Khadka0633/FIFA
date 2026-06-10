@@ -52,6 +52,9 @@ export default function LoginPage({ onLogin, onViewLeaderboard  }) {
             <span className="w-6 h-6 bg-[#FFD700] rounded-full flex items-center justify-center text-[#001A3D] text-xs font-black">1</span>
             Your name
           </h2>
+          <p className="text-[#4A6B8A] text-xs mb-3">
+  Already played? Enter the same name to continue.
+</p>
           <input
             type="text"
             value={name}
@@ -105,13 +108,12 @@ export default function LoginPage({ onLogin, onViewLeaderboard  }) {
             </p>
           )}
 
-          <button
-            onClick={handleJoin}
-            className="mt-6 w-full bg-[#FFD700] hover:bg-[#FFC200] text-[#001A3D] font-black text-lg py-3.5 rounded-xl transition-all hover:scale-[1.02] active:scale-[0.98] shadow-lg shadow-[#FFD700]/20 tracking-wide"
-          >
-            ENTER THE TOURNAMENT ⚽
-          </button>
-
+         <button
+  onClick={handleJoin}
+  className="mt-6 w-full bg-[#FFD700] hover:bg-[#FFC200] text-[#001A3D] font-black text-lg py-3.5 rounded-xl transition-all hover:scale-[1.02] active:scale-[0.98] shadow-lg shadow-[#FFD700]/20 tracking-wide"
+>
+  {name.trim() ? "CONTINUE ⚽" : "ENTER THE TOURNAMENT ⚽"}
+</button>
           <button
   onClick={onViewLeaderboard}
   className="mt-3 w-full border border-[#003F88] text-[#7BA3D4] font-bold py-3 rounded-xl hover:border-[#7BA3D4] hover:text-white transition-all"
