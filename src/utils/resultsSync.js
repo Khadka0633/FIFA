@@ -61,3 +61,39 @@ export const syncResults = async () => {
     console.error("❌ Sync failed:", e);
   }
 };
+
+
+
+export const fetchLiveScores = async () => {
+  try {
+    const res = await fetch(
+      `https://corsproxy.io/?${encodeURIComponent(`https://api.football-data.org/v4/competitions/${WC_COMPETITION_ID}/matches?status=IN_PLAY`)}`,
+      { headers: { "X-Auth-Token": API_KEY } }
+    );
+    const data = await res.json();
+    if (!data.matches) return {};
+
+    const live = {};
+    for (const fixture of data.matches) {
+      const homeCode = TEAM_NAME_TO_CODE[fixture.homeTeam.name];
+      const awayCode = TEAM_NAME_TO_CODE[fixture.awayTeam.name];
+      if (!homeCode || !awayCode) continue;
+
+      const match = GROUP_STAGE_MATCHES.find(
+        (m) => m.home === homeCode && m.away === awayCode
+      );
+      if (!match) continue;
+
+      live[match.id] = {
+        status: "LIVE",
+        home: fixture.score.fullTime.home ?? fixture.score.halfTime.home ?? 0,
+        away: fixture.score.fullTime.away ?? fixture.score.halfTime.away ?? 0,
+        minute: fixture.minute ?? "?",
+      };
+    }
+    return live;
+  } catch (e) {
+    console.error("❌ Live score fetch failed:", e);
+    return {};
+  }
+};

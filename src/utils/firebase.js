@@ -104,3 +104,47 @@ const demoResults = (callback) => {
   }, 5000);
   return () => clearInterval(interval);
 };
+
+
+
+// Send a chat message
+export const sendChatMessage = async (playerName, avatarFlag, message) => {
+  if (!db) return demoSendChat(playerName, avatarFlag, message);
+  const chatRef = ref(db, `chat/${Date.now()}_${sanitize(playerName)}`);
+  await set(chatRef, {
+    name: playerName,
+    avatarFlag,
+    message,
+    timestamp: Date.now(),
+  });
+};
+
+// Listen to chat messages (latest 50)
+export const getChat = (callback) => {
+  if (!db) return demoGetChat(callback);
+  const chatRef = ref(db, "chat");
+  return onValue(chatRef, (snap) => {
+    if (!snap.exists()) return callback([]);
+    const msgs = Object.values(snap.val())
+      .sort((a, b) => a.timestamp - b.timestamp)
+      .slice(-50);
+    callback(msgs);
+  });
+};
+
+// ── Demo mode chat ─────────────────────────────────────────────────────────────
+const demoSendChat = (playerName, avatarFlag, message) => {
+  const all = JSON.parse(localStorage.getItem("wc_chat") || "[]");
+  all.push({ name: playerName, avatarFlag, message, timestamp: Date.now() });
+  localStorage.setItem("wc_chat", JSON.stringify(all.slice(-50)));
+};
+
+const demoGetChat = (callback) => {
+  const all = JSON.parse(localStorage.getItem("wc_chat") || "[]");
+  callback(all);
+  const interval = setInterval(() => {
+    const msgs = JSON.parse(localStorage.getItem("wc_chat") || "[]");
+    callback(msgs);
+  }, 3000);
+  return () => clearInterval(interval);
+};

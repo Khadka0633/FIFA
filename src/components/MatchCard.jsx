@@ -1,9 +1,12 @@
 import { getTeam } from "../data/matches";
 import FlagImg from "./FlagImg";
 
-export default function MatchCard({ match, prediction, onPick, locked }) {
+export default function MatchCard({ match, prediction, onPick, locked, result, liveScore }) {
   const home = getTeam(match.home);
   const away = getTeam(match.away);
+
+  const isLive = liveScore?.status === "LIVE";
+  const isFinished = result !== undefined;
 
   const options = [
     { value: match.home, label: home.iso, sub: home.code },
@@ -14,16 +17,28 @@ export default function MatchCard({ match, prediction, onPick, locked }) {
   return (
     <div className={`relative bg-[#002657] border rounded-xl overflow-hidden transition-all ${
       prediction ? "border-[#FFD700]/40" : "border-[#003F88]/60"
-    } ${locked ? "opacity-90" : "hover:border-[#7BA3D4]"}`}>
+    } ${isLive ? "border-red-500/60" : ""} ${locked ? "opacity-90" : "hover:border-[#7BA3D4]"}`}>
 
       {/* Group badge + date */}
       <div className="flex items-center justify-between px-3 pt-2.5 pb-0">
         <p className="text-[#4A6B8A] text-[10px] font-medium uppercase tracking-wider">
           {match.date} · {match.venue}
         </p>
-        <span className="bg-[#FFD700]/10 text-[#FFD700] text-[9px] font-black px-1.5 py-0.5 rounded tracking-widest">
-          GRP {match.group}
-        </span>
+        <div className="flex items-center gap-1.5">
+          {isLive && (
+            <span className="flex items-center gap-1 bg-red-500/20 text-red-400 text-[9px] font-black px-1.5 py-0.5 rounded tracking-widest animate-pulse">
+              🔴 LIVE
+            </span>
+          )}
+          {isFinished && !isLive && (
+            <span className="bg-green-500/10 text-green-400 text-[9px] font-black px-1.5 py-0.5 rounded tracking-widest">
+              FT
+            </span>
+          )}
+          <span className="bg-[#FFD700]/10 text-[#FFD700] text-[9px] font-black px-1.5 py-0.5 rounded tracking-widest">
+            GRP {match.group}
+          </span>
+        </div>
       </div>
 
       {/* Teams row */}
@@ -35,9 +50,19 @@ export default function MatchCard({ match, prediction, onPick, locked }) {
           <span className="text-[#4A6B8A] text-[9px] font-black uppercase tracking-widest mt-0.5">{home.code}</span>
         </div>
 
-        {/* VS */}
+        {/* VS / Score */}
         <div className="flex flex-col items-center flex-shrink-0">
-          <span className="text-[#FFD700] text-xs font-black tracking-widest">VS</span>
+          {isLive && liveScore ? (
+            <span className="text-white font-black text-lg leading-none">
+              {liveScore.home} - {liveScore.away}
+            </span>
+          ) : isFinished && liveScore ? (
+            <span className="text-green-400 font-black text-lg leading-none">
+              {liveScore.home} - {liveScore.away}
+            </span>
+          ) : (
+            <span className="text-[#FFD700] text-xs font-black tracking-widest">VS</span>
+          )}
         </div>
 
         {/* Away team */}
@@ -76,6 +101,11 @@ export default function MatchCard({ match, prediction, onPick, locked }) {
       {/* Bottom selected bar */}
       {prediction && (
         <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#FFD700] opacity-70" />
+      )}
+
+      {/* Live glow border */}
+      {isLive && (
+        <div className="absolute inset-0 rounded-xl ring-1 ring-red-500/40 pointer-events-none" />
       )}
     </div>
   );

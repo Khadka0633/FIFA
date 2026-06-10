@@ -3,6 +3,7 @@ import { GROUP_STAGE_MATCHES, GROUPS, getTeam } from "../data/matches";
 import MatchCard from "../components/MatchCard";
 import SubmitPreview from "../components/SubmitPreview";
 import { savePredictions } from "../utils/firebase";
+import FlagImg from "../components/FlagImg";
 
 export default function PredictPage({ player, onSubmitted }) {
   const [predictions, setPredictions] = useState({});
@@ -52,7 +53,7 @@ export default function PredictPage({ player, onSubmitted }) {
       <div className="sticky top-0 z-30 bg-[#001A3D]/95 backdrop-blur border-b border-[#003F88]">
         <div className="max-w-4xl mx-auto px-4 py-3 flex items-center justify-between gap-3">
           <div className="flex items-center gap-2 min-w-0">
-            <span className="text-2xl flex-shrink-0">{player.avatarFlag.flag}</span>
+            <FlagImg iso={player.avatarFlag.iso} size={28} className="rounded-sm flex-shrink-0" />
             <div className="min-w-0">
               <p className="text-white font-black text-sm truncate leading-tight">{player.name}</p>
               <p className="text-[#4A6B8A] text-[10px] uppercase tracking-wider">Group Stage Predictions</p>
@@ -139,7 +140,7 @@ export default function PredictPage({ player, onSubmitted }) {
             </button>
           )}
           <div className="flex-1" />
-          {activeGroup !== "H" && (
+          {activeGroup !== "L" && (
             <button
               onClick={() => setActiveGroup(GROUPS[GROUPS.indexOf(activeGroup) + 1])}
               className="flex items-center gap-2 text-[#7BA3D4] hover:text-white text-sm font-medium transition-colors"
