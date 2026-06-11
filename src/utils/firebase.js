@@ -154,3 +154,20 @@ const demoGetChat = (callback) => {
   }, 3000);
   return () => clearInterval(interval);
 };
+
+// Delete chat messages older than 7 days
+export const cleanOldMessages = async () => {
+  if (!db) return;
+  const cutoff = Date.now() - 7 * 24 * 60 * 60 * 1000;
+  const chatRef = ref(db, "chat");
+  const snap = await get(chatRef);
+  if (!snap.exists()) return;
+
+  const updates = {};
+  Object.entries(snap.val()).forEach(([key, msg]) => {
+    if (msg.timestamp < cutoff) updates[key] = null;
+  });
+
+  await update(chatRef, updates);
+  console.log("🧹 Old chat messages cleaned!");
+};

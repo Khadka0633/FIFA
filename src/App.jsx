@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { initFirebase, getPlayerData } from "./utils/firebase";
+import { initFirebase, getPlayerData, cleanOldMessages } from "./utils/firebase";
 import LoginPage from "./pages/LoginPage";
 import PredictPage from "./pages/PredictPage";
 import LeaderboardPage from "./pages/LeaderboardPage";
@@ -23,6 +23,16 @@ export default function App() {
     const interval = setInterval(syncResults, 15 * 60 * 1000);
     return () => clearInterval(interval);
   }, []);
+
+
+  // inside your useEffect where syncResults is called
+useEffect(() => {
+  syncResults();
+  cleanOldMessages(); // ✅ runs once when app loads
+  
+  const interval = setInterval(syncResults, 15 * 60 * 1000);
+  return () => clearInterval(interval);
+}, []);
 
   const handleLogin = async (name, avatarFlag) => {
     const playerObj = { name, avatarFlag };
