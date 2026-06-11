@@ -2,8 +2,10 @@ import { useState, useEffect } from "react";
 import { GROUP_STAGE_MATCHES, GROUPS, getTeam } from "../data/matches";
 import MatchCard from "../components/MatchCard";
 import SubmitPreview from "../components/SubmitPreview";
-import { savePredictions } from "../utils/firebase";
+import { savePredictions, getResults } from "../utils/firebase";
 import FlagImg from "../components/FlagImg";
+import { fetchLiveScores } from "../utils/resultsSync";
+
 
 export default function PredictPage({ player, onSubmitted }) {
   const [predictions, setPredictions] = useState({});
@@ -11,6 +13,8 @@ export default function PredictPage({ player, onSubmitted }) {
   const [showPreview, setShowPreview] = useState(false);
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState("");
+  const [liveScores, setLiveScores] = useState({});
+  const [results, setResults] = useState({});
 
   const totalMatches = GROUP_STAGE_MATCHES.length;
   const predicted = Object.keys(predictions).length;
@@ -46,6 +50,25 @@ export default function PredictPage({ player, onSubmitted }) {
     }
     setSaving(false);
   };
+
+
+  useEffect(() => {
+  const sync = async () => {
+    const scores = await fetchLiveScores();
+    setLiveScores(scores);
+  };
+  sync();
+  const interval = setInterval(sync, 60000); // every 1 min
+  return () => clearInterval(interval);
+}, []);
+
+
+
+useEffect(() => {
+  const unsub = getResults(setResults);
+  return () => { if (typeof unsub === "function") unsub(); };
+}, []);
+
 
   return (
     <div className="min-h-screen bg-[#001A3D]">
@@ -125,6 +148,8 @@ export default function PredictPage({ player, onSubmitted }) {
               prediction={predictions[match.id]}
               onPick={handlePick}
               locked={false}
+               result={results?.[match.id]}
+  liveScore={liveScores[match.id]}
             />
           ))}
         </div>

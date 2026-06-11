@@ -1,8 +1,9 @@
 import { useState } from "react";
 import { GROUP_STAGE_MATCHES, GROUPS, getTeam } from "../data/matches";
 import { setResult } from "../utils/firebase";
+import FlagImg from "../components/FlagImg";
 
-const ADMIN_PASSWORD = "wc2026admin"; // Change this!
+const ADMIN_PASSWORD = "wc2026admin";
 
 export default function AdminPage({ onExit }) {
   const [authed, setAuthed] = useState(false);
@@ -91,30 +92,41 @@ export default function AdminPage({ onExit }) {
             const away = getTeam(match.away);
             const currentResult = results[match.id];
             const options = [
-              { value: match.home, label: `${home.flag} ${home.code}` },
-              { value: "DRAW", label: "🤝 Draw" },
-              { value: match.away, label: `${away.flag} ${away.code}` },
+              { value: match.home, label: home.code, iso: home.iso },
+              { value: "DRAW", label: "Draw", iso: null },
+              { value: match.away, label: away.code, iso: away.iso },
             ];
+
             return (
               <div key={match.id} className="bg-[#002657] border border-[#003F88] rounded-xl px-4 py-3">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-white text-sm font-bold">
-                    {home.flag} {home.name} vs {away.name} {away.flag}
-                  </span>
-                  <span className="text-[#4A6B8A] text-[10px]">{match.date}</span>
+                {/* Match header with flags */}
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <FlagImg iso={home.iso} size={20} className="rounded-sm" />
+                    <span className="text-white text-sm font-bold">{home.name}</span>
+                    <span className="text-[#4A6B8A] text-xs font-black">vs</span>
+                    <span className="text-white text-sm font-bold">{away.name}</span>
+                    <FlagImg iso={away.iso} size={20} className="rounded-sm" />
+                  </div>
+                  <span className="text-[#4A6B8A] text-[10px] flex-shrink-0">{match.date}</span>
                 </div>
+
+                {/* Result buttons */}
                 <div className="flex gap-2">
                   {options.map((opt) => (
                     <button
                       key={opt.value}
                       onClick={() => handleSetResult(match.id, opt.value)}
-                      className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all ${
+                      className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-bold transition-all ${
                         currentResult === opt.value
                           ? "bg-green-500/20 border border-green-500 text-green-400"
                           : "bg-[#001A3D] border border-[#003F88] text-[#7BA3D4] hover:border-[#7BA3D4]"
                       }`}
                     >
-                      {opt.label}
+                      {opt.iso
+                        ? <><FlagImg iso={opt.iso} size={16} className="rounded-sm" />{opt.label}</>
+                        : <span>🤝 {opt.label}</span>
+                      }
                       {saved[match.id] && currentResult === opt.value && " ✓"}
                     </button>
                   ))}

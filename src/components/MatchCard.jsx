@@ -6,7 +6,7 @@ export default function MatchCard({ match, prediction, onPick, locked, result, l
   const away = getTeam(match.away);
 
   const isLive = liveScore?.status === "LIVE";
-  const isFinished = result !== undefined;
+const isFinished = result !== undefined && result !== null;
 
   const options = [
     { value: match.home, label: home.iso, sub: home.code },
