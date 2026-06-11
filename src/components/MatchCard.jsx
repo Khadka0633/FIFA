@@ -6,7 +6,8 @@ export default function MatchCard({ match, prediction, onPick, locked, result, l
   const away = getTeam(match.away);
 
   const isLive = liveScore?.status === "LIVE";
-const isFinished = result !== undefined && result !== null;
+const winner = result ? (typeof result === "object" ? result.winner : result) : null;
+const isFinished = winner !== null;
 
   const options = [
     { value: match.home, label: home.iso, sub: home.code },
@@ -56,10 +57,10 @@ const isFinished = result !== undefined && result !== null;
             <span className="text-white font-black text-lg leading-none">
               {liveScore.home} - {liveScore.away}
             </span>
-          ) : isFinished && liveScore ? (
-            <span className="text-green-400 font-black text-lg leading-none">
-              {liveScore.home} - {liveScore.away}
-            </span>
+          )  : isFinished && result?.homeScore != null ? (
+    <span className="text-green-400 font-black text-lg leading-none">
+      {result.homeScore} - {result.awayScore}
+    </span>
           ) : (
             <span className="text-[#FFD700] text-xs font-black tracking-widest">VS</span>
           )}

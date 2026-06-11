@@ -4,10 +4,11 @@ export const calculateScore = (predictions, results) => {
   let correct = 0;
   let total = 0;
 
-  Object.entries(results).forEach(([matchId, result]) => {
+   Object.entries(results).forEach(([matchId, result]) => {
+    const winner = typeof result === "object" ? result.winner : result;
     if (predictions[matchId] !== undefined) {
       total++;
-      if (predictions[matchId] === result) {
+      if (predictions[matchId] === winner) {
         score += 2;
         correct++;
       }

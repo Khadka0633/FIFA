@@ -59,7 +59,7 @@ export const syncResults = async () => {
         awayScore > homeScore ? awayCode :
         "DRAW";
 
-      await setResult(match.id, winner);
+      await setResult(match.id, winner, homeScore, awayScore);
     }
 
     console.log("✅ Results synced from football-data.org!");

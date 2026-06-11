@@ -71,7 +71,7 @@ export const getResults = (callback) => {
 // Admin: set match result
 export const setResult = async (matchId, result) => {
   if (!db) return;
-  await update(ref(db, "results"), { [matchId]: result });
+  await update(ref(db, "results"), { [matchId]: { winner: result, homeScore, awayScore } });
 };
 
 const sanitize = (name) => name.toLowerCase().replace(/[^a-z0-9]/g, "_");
