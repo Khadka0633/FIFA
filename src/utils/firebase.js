@@ -4,7 +4,7 @@
 // after you set up Firebase at https://console.firebase.google.com
 // ============================================================
 import { initializeApp } from "firebase/app";
-import { getDatabase, ref, set, get, onValue, update } from "firebase/database";
+import { getDatabase, ref, set, get, onValue, update, query, orderByKey, limitToLast } from "firebase/database";
 
 const firebaseConfig = {
   apiKey: "AIzaSyCj30D6Td_opvPLg2OW_VCE94CPnP6sVoY",
@@ -120,7 +120,7 @@ export const sendChatMessage = async (playerName, avatarFlag, message) => {
 
 // Listen to chat messages (latest 50)
 
-import { getDatabase, ref, set, get, onValue, update, query, orderByKey, limitToLast } from "firebase/database";
+
 export const getChat = (callback) => {
   if (!db) return demoGetChat(callback);
   

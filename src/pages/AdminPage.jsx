@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { GROUP_STAGE_MATCHES, GROUPS, getTeam } from "../data/matches";
-import { setResult } from "../utils/firebase";
+import { setResult, getAllPlayers } from "../utils/firebase";
 import FlagImg from "../components/FlagImg";
+import { exportPredictions } from "../utils/exportExcel";
 
 const ADMIN_PASSWORD = "wc2026admin";
 
@@ -11,6 +12,7 @@ export default function AdminPage({ onExit }) {
   const [results, setResults] = useState({});
   const [saved, setSaved] = useState({});
   const [activeGroup, setActiveGroup] = useState("A");
+  const [players, setPlayers] = useState({});
 
   const handleLogin = () => {
     if (pw === ADMIN_PASSWORD) setAuthed(true);
@@ -27,6 +29,15 @@ export default function AdminPage({ onExit }) {
       alert("Failed to save result.");
     }
   };
+    useEffect(() => {
+  if (authed) {
+    const unsub = getAllPlayers(setPlayers);
+    return () => { if (typeof unsub === "function") unsub(); };
+  }
+}, [authed]);
+
+
+
 
   if (!authed) {
     return (
@@ -56,17 +67,33 @@ export default function AdminPage({ onExit }) {
     );
   }
 
+
+
   const groupMatches = GROUP_STAGE_MATCHES.filter((m) => m.group === activeGroup);
 
   return (
     <div className="min-h-screen bg-[#001A3D]">
       <div className="sticky top-0 z-20 bg-[#001A3D]/95 backdrop-blur border-b border-[#003F88]">
-        <div className="max-w-3xl mx-auto px-4 py-4 flex items-center justify-between">
-          <h1 className="text-white font-black text-xl">⚙️ Admin — Enter Results</h1>
-          <button onClick={onExit} className="text-[#4A6B8A] hover:text-white text-sm transition-colors">
-            ← Exit
-          </button>
-        </div>
+       <div className="max-w-3xl mx-auto px-4 py-4 flex items-center justify-between">
+  <h1 className="text-white font-black text-xl">⚙️ Admin — Enter Results</h1>
+  <div className="flex items-center gap-3">
+    <button
+      onClick={() => exportPredictions(players)}
+      disabled={Object.keys(players).length === 0}
+      className="bg-green-600 hover:bg-green-500 disabled:opacity-40 disabled:cursor-not-allowed text-white font-black text-xs px-3 py-2 rounded-lg transition-all"
+    >
+      📥 Export Excel ({Object.keys(players).length} users)
+    </button>
+    <button onClick={onExit} className="text-[#4A6B8A] hover:text-white text-sm transition-colors">
+      ← Exit
+    </button>
+  </div>
+</div>
+
+
+
+
+        
         <div className="max-w-3xl mx-auto px-4 pb-3 flex gap-1.5 overflow-x-auto">
           {GROUPS.map((g) => (
             <button
