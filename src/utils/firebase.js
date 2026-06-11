@@ -69,11 +69,10 @@ export const getResults = (callback) => {
 };
 
 // Admin: set match result
-export const setResult = async (matchId, result) => {
+export const setResult = async (matchId, winner, homeScore, awayScore) => {
   if (!db) return;
-  await update(ref(db, "results"), { [matchId]: { winner: result, homeScore, awayScore } });
+  await update(ref(db, "results"), { [matchId]: { winner, homeScore, awayScore } });
 };
-
 const sanitize = (name) => name.toLowerCase().replace(/[^a-z0-9]/g, "_");
 
 // ─── DEMO MODE (localStorage fallback until Firebase is set up) ───────────────
@@ -120,14 +119,21 @@ export const sendChatMessage = async (playerName, avatarFlag, message) => {
 };
 
 // Listen to chat messages (latest 50)
+
+import { getDatabase, ref, set, get, onValue, update, query, orderByKey, limitToLast } from "firebase/database";
 export const getChat = (callback) => {
   if (!db) return demoGetChat(callback);
-  const chatRef = ref(db, "chat");
-  return onValue(chatRef, (snap) => {
+  
+  const chatQuery = query(
+    ref(db, "chat"),
+    orderByKey(),        // order by timestamp_username key
+    limitToLast(50)      // Firebase only sends last 50 — saves reads!
+  );
+
+  return onValue(chatQuery, (snap) => {
     if (!snap.exists()) return callback([]);
     const msgs = Object.values(snap.val())
-      .sort((a, b) => a.timestamp - b.timestamp)
-      .slice(-50);
+      .sort((a, b) => a.timestamp - b.timestamp);
     callback(msgs);
   });
 };
