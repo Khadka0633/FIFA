@@ -55,7 +55,7 @@ export default function LeaderboardPage({ player, myPredictions, onBack }) {
 
         {/* Tabs */}
         <div className="max-w-2xl mx-auto px-4 pb-3 flex gap-2">
-  {["board", "chat", "mypicks", "knockout"].map((t) => (
+  {["board", "chat", "mypicks","fixtures", "knockout"].map((t) => (
     <button
       key={t}
       onClick={() => setTab(t)}
@@ -66,6 +66,7 @@ export default function LeaderboardPage({ player, myPredictions, onBack }) {
       {t === "board" ? "🏆 Rankings"
       : t === "chat" ? "💬 Chat"
       : t === "mypicks" ? "⚽ My Picks"
+      : t === "fixtures" ? "📅 Fixtures"
       : "🔜 Knockout"}
     </button>
   ))}
@@ -169,6 +170,10 @@ export default function LeaderboardPage({ player, myPredictions, onBack }) {
             <p className="text-[#4A6B8A] text-sm mt-1">Submit your picks first!</p>
           </div>
         )}
+
+        {tab === "fixtures" && (
+  <FixturesTab results={results} />
+)}
 
         {tab === "knockout" && (
           <div className="text-center py-20">
@@ -362,6 +367,148 @@ function PlayerPicksView({ player, results, highlight }) {
           </div>
         );
       })}
+    </div>
+  );
+}
+
+
+function FixturesTab({ results }) {
+  const allDates = [...new Set(GROUP_STAGE_MATCHES.map((m) => m.date))]
+    .sort((a, b) => new Date(`${a} 2026`) - new Date(`${b} 2026`));
+
+  const today = `Jun ${new Date().getDate()}`;
+  const defaultDate = allDates.includes(today) ? today : allDates[0];
+  const [activeDate, setActiveDate] = useState(defaultDate);
+
+  const scrollRef = useRef(null);
+
+  // Auto-scroll to active date tab
+  useEffect(() => {
+    const container = scrollRef.current;
+    if (!container) return;
+    const activeBtn = container.querySelector("[data-active='true']");
+    if (activeBtn) {
+      activeBtn.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
+    }
+  }, [activeDate]);
+
+  const dateMatches = GROUP_STAGE_MATCHES.filter((m) => m.date === activeDate);
+
+  return (
+    <div>
+      {/* Date tabs */}
+      <div
+        ref={scrollRef}
+        className="flex gap-1.5 overflow-x-auto pb-3 mb-4"
+        style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
+      >
+        {allDates.map((date) => {
+          const isActive = activeDate === date;
+          const allFinished = GROUP_STAGE_MATCHES
+            .filter((m) => m.date === date)
+            .every((m) => results[m.id]);
+          const someResult = GROUP_STAGE_MATCHES
+            .filter((m) => m.date === date)
+            .some((m) => results[m.id]);
+
+          return (
+            <button
+              key={date}
+              data-active={isActive}
+              onClick={() => setActiveDate(date)}
+              className={`flex-shrink-0 px-3 py-1.5 rounded-lg text-xs font-black transition-all relative ${
+                isActive
+                  ? "bg-[#FFD700] text-[#001A3D]"
+                  : "bg-[#002657] text-[#7BA3D4] hover:bg-[#003F88]"
+              }`}
+            >
+              {date}
+              {allFinished && (
+                <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-green-400 rounded-full" />
+              )}
+              {someResult && !allFinished && (
+                <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-yellow-400 rounded-full" />
+              )}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Match count */}
+      <p className="text-[#4A6B8A] text-[10px] uppercase tracking-wider mb-3">
+        {dateMatches.length} matches · {dateMatches.filter((m) => results[m.id]).length} results in
+      </p>
+
+      {/* Matches */}
+      <div className="space-y-2">
+        {dateMatches.map((match) => {
+          const home = getTeam(match.home);
+          const away = getTeam(match.away);
+          const result = results[match.id];
+          const winner = result ? (typeof result === "object" ? result.winner : result) : null;
+          const homeScore = result?.homeScore;
+          const awayScore = result?.awayScore;
+          const isFinished = winner !== null;
+
+          return (
+            <div
+              key={match.id}
+              className={`bg-[#002657] border rounded-xl px-4 py-3 flex items-center gap-3 transition-all ${
+                isFinished ? "border-[#003F88]" : "border-[#003F88]/50"
+              }`}
+            >
+              {/* Group badge */}
+              <span className="text-[#FFD700] text-[9px] font-black bg-[#FFD700]/10 px-1.5 py-0.5 rounded flex-shrink-0">
+                {match.group}
+              </span>
+
+              {/* Home */}
+              <div className="flex items-center gap-2 flex-1 justify-end">
+                <span className={`text-sm font-bold truncate ${
+                  isFinished
+                    ? winner === match.home ? "text-white" : "text-[#4A6B8A]"
+                    : "text-[#7BA3D4]"
+                }`}>
+                  {home.code}
+                </span>
+                <FlagImg iso={home.iso} size={24} className="rounded-sm flex-shrink-0" />
+              </div>
+
+              {/* Score / VS */}
+              <div className="flex flex-col items-center w-16 flex-shrink-0">
+                {isFinished && homeScore != null ? (
+                  <>
+                    <span className="text-white font-black text-base leading-none">
+                      {homeScore} - {awayScore}
+                    </span>
+                    {winner === "DRAW"
+                      ? <span className="text-[#7BA3D4] text-[9px] font-black mt-0.5">DRAW</span>
+                      : <span className="text-green-400 text-[9px] font-black tracking-widest mt-0.5">FT</span>
+                    }
+                  </>
+                ) : (
+                  <>
+                    <span className="text-[#FFD700] text-xs font-black">VS</span>
+                    <span className="text-[#4A6B8A] text-[9px] mt-0.5 text-center leading-tight">{match.venue}</span>
+                  </>
+                )}
+              </div>
+
+              {/* Away */}
+              <div className="flex items-center gap-2 flex-1">
+                <FlagImg iso={away.iso} size={24} className="rounded-sm flex-shrink-0" />
+                <span className={`text-sm font-bold truncate ${
+                  isFinished
+                    ? winner === match.away ? "text-white" : "text-[#4A6B8A]"
+                    : "text-[#7BA3D4]"
+                }`}>
+                  {away.code}
+                </span>
+              </div>
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }
