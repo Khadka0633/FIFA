@@ -1,7 +1,7 @@
-import { setResult } from "./firebase";
 import { GROUP_STAGE_MATCHES } from "../data/matches";
 import { getDatabase, ref, update } from "firebase/database";
 
+const IS_DEV = import.meta.env.DEV;
 const API_KEY = "8dc688a211df452c854e5115232ea6a6";
 
 const TEAM_NAME_TO_CODE = {
@@ -104,17 +104,22 @@ const getScore = (fixture) => {
   };
 };
 
+const fetchFromAPI = async (status) => {
+  if (IS_DEV) {
+    const url = `https://api.football-data.org/v4/competitions/WC/matches?status=${status}&_=${Date.now()}`;
+    return fetch(`https://corsproxy.io/?${encodeURIComponent(url)}`, {
+      headers: { "X-Auth-Token": API_KEY },
+    });
+  } else {
+    return fetch(`/api/wc-sync?status=${status}&_=${Date.now()}`);
+  }
+};
+
 export const syncResults = async () => {
   console.log("🔄 syncResults called at", new Date().toLocaleTimeString());
   try {
-    const bustCache = Date.now();
-    const apiUrl = `https://api.football-data.org/v4/competitions/WC/matches?status=FINISHED&_=${bustCache}`;
-
     console.log("📡 Fetching from API...");
-    const res = await fetch(
-      `https://corsproxy.io/?${encodeURIComponent(apiUrl)}`,
-      { headers: { "X-Auth-Token": API_KEY } },
-    );
+    const res = await fetchFromAPI("FINISHED");
 
     if (!res.ok) {
       console.error("❌ HTTP error:", res.status, res.statusText);
@@ -130,7 +135,6 @@ export const syncResults = async () => {
       return;
     }
 
-    // Collect all updates into one object — single Firebase write instead of N writes
     const updates = {};
 
     for (const fixture of matches) {
@@ -180,7 +184,6 @@ export const syncResults = async () => {
       return;
     }
 
-    // Single batch write to Firebase
     const db = getDatabase();
     await update(ref(db, "results"), updates);
     console.log(
@@ -188,5 +191,38 @@ export const syncResults = async () => {
     );
   } catch (e) {
     console.error("❌ Sync failed:", e);
+  }
+};
+
+export const fetchLiveScores = async () => {
+  try {
+    const res = await fetchFromAPI("IN_PLAY");
+    const data = await res.json();
+    if (!data.matches) return {};
+
+    const live = {};
+    for (const fixture of data.matches) {
+      const homeCode = TEAM_NAME_TO_CODE[fixture.homeTeam.name];
+      const awayCode = TEAM_NAME_TO_CODE[fixture.awayTeam.name];
+      if (!homeCode || !awayCode) continue;
+
+      const match = GROUP_STAGE_MATCHES.find(
+        (m) => m.home === homeCode && m.away === awayCode,
+      );
+      if (!match) continue;
+
+      const { home, away } = getScore(fixture);
+
+      live[match.id] = {
+        status: "LIVE",
+        home,
+        away,
+        minute: fixture.minute ?? fixture.score?.duration ?? "?",
+      };
+    }
+    return live;
+  } catch (e) {
+    console.error("❌ Live score fetch failed:", e);
+    return {};
   }
 };
