@@ -97,12 +97,14 @@ useEffect(() => {
             </div>
           </div>
 
-          <button
+      {/*    <button
             onClick={handlePreview}
             className="bg-[#FFD700] hover:bg-[#FFC200] text-[#001A3D] font-black text-xs py-2 px-3 rounded-lg transition-all hover:scale-105 active:scale-95 flex-shrink-0"
           >
             SUBMIT ⚽
           </button>
+
+          */}
         </div>
 
         {/* Group tabs */}
