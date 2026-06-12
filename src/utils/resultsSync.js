@@ -6,89 +6,90 @@ const API_KEY = "8dc688a211df452c854e5115232ea6a6";
 
 const TEAM_NAME_TO_CODE = {
   // Group A
-  "Mexico": "MEX",
+  Mexico: "MEX",
   "South Africa": "RSA",
   "Korea Republic": "KOR",
   "South Korea": "KOR",
-  "Czechia": "CZE",
+  Czechia: "CZE",
   "Czech Republic": "CZE",
 
   // Group B
-  "Canada": "CAN",
-  "Qatar": "QAT",
-  "Switzerland": "SUI",
+  Canada: "CAN",
+  Qatar: "QAT",
+  Switzerland: "SUI",
   "Bosnia and Herzegovina": "BIH",
   "Bosnia & Herzegovina": "BIH",
+  "Bosnia-Herzegovina": "BIH",
 
   // Group C
-  "Brazil": "BRA",
-  "Morocco": "MAR",
-  "Haiti": "HAI",
-  "Scotland": "SCO",
+  Brazil: "BRA",
+  Morocco: "MAR",
+  Haiti: "HAI",
+  Scotland: "SCO",
 
   // Group D
   "United States": "USA",
-  "USA": "USA",
-  "Paraguay": "PAR",
-  "Australia": "AUS",
-  "Turkey": "TUR",
-  "Türkiye": "TUR",
+  USA: "USA",
+  Paraguay: "PAR",
+  Australia: "AUS",
+  Turkey: "TUR",
+  Türkiye: "TUR",
 
   // Group E
-  "Germany": "GER",
-  "Curaçao": "CUW",
-  "Curacao": "CUW",
+  Germany: "GER",
+  Curaçao: "CUW",
+  Curacao: "CUW",
   "Côte d'Ivoire": "CIV",
   "Ivory Coast": "CIV",
-  "Ecuador": "ECU",
+  Ecuador: "ECU",
 
   // Group F
-  "Netherlands": "NED",
-  "Japan": "JPN",
-  "Tunisia": "TUN",
-  "Sweden": "SWE",
+  Netherlands: "NED",
+  Japan: "JPN",
+  Tunisia: "TUN",
+  Sweden: "SWE",
 
   // Group G
-  "Belgium": "BEL",
-  "Egypt": "EGY",
+  Belgium: "BEL",
+  Egypt: "EGY",
   "IR Iran": "IRN",
-  "Iran": "IRN",
+  Iran: "IRN",
   "New Zealand": "NZL",
 
   // Group H
-  "Spain": "ESP",
+  Spain: "ESP",
   "Cape Verde": "CPV",
   "Cape Verde Islands": "CPV",
   "Cabo Verde": "CPV",
-  "Uruguay": "URU",
+  Uruguay: "URU",
   "Saudi Arabia": "KSA",
 
   // Group I
-  "France": "FRA",
-  "Senegal": "SEN",
-  "Norway": "NOR",
-  "Iraq": "IRQ",
+  France: "FRA",
+  Senegal: "SEN",
+  Norway: "NOR",
+  Iraq: "IRQ",
 
   // Group J
-  "Argentina": "ARG",
-  "Algeria": "ALG",
-  "Austria": "AUT",
-  "Jordan": "JOR",
+  Argentina: "ARG",
+  Algeria: "ALG",
+  Austria: "AUT",
+  Jordan: "JOR",
 
   // Group K
-  "Portugal": "POR",
+  Portugal: "POR",
   "DR Congo": "COD",
   "Congo DR": "COD",
   "Congo, DR": "COD",
   "Democratic Republic of Congo": "COD",
-  "Uzbekistan": "UZB",
-  "Colombia": "COL",
+  Uzbekistan: "UZB",
+  Colombia: "COL",
 
   // Group L
-  "England": "ENG",
-  "Croatia": "CRO",
-  "Ghana": "GHA",
-  "Panama": "PAN",
+  England: "ENG",
+  Croatia: "CRO",
+  Ghana: "GHA",
+  Panama: "PAN",
 };
 
 const getScore = (fixture) => {
@@ -112,7 +113,7 @@ export const syncResults = async () => {
     console.log("📡 Fetching from API...");
     const res = await fetch(
       `https://corsproxy.io/?${encodeURIComponent(apiUrl)}`,
-      { headers: { "X-Auth-Token": API_KEY } }
+      { headers: { "X-Auth-Token": API_KEY } },
     );
 
     if (!res.ok) {
@@ -137,26 +138,40 @@ export const syncResults = async () => {
       const awayCode = TEAM_NAME_TO_CODE[fixture.awayTeam.name];
 
       if (!homeCode || !awayCode) {
-        console.warn("⚠️ Unknown team name:", fixture.homeTeam.name, "vs", fixture.awayTeam.name);
+        console.warn(
+          "⚠️ Unknown team name:",
+          fixture.homeTeam.name,
+          "vs",
+          fixture.awayTeam.name,
+        );
         continue;
       }
 
       const match = GROUP_STAGE_MATCHES.find(
-        (m) => m.home === homeCode && m.away === awayCode
+        (m) => m.home === homeCode && m.away === awayCode,
       );
 
       if (!match) {
-        console.warn("⚠️ Match not found in schedule:", homeCode, "vs", awayCode);
+        console.warn(
+          "⚠️ Match not found in schedule:",
+          homeCode,
+          "vs",
+          awayCode,
+        );
         continue;
       }
 
       const { home: homeScore, away: awayScore } = getScore(fixture);
       const winner =
-        homeScore > awayScore ? homeCode :
-        awayScore > homeScore ? awayCode :
-        "DRAW";
+        homeScore > awayScore
+          ? homeCode
+          : awayScore > homeScore
+            ? awayCode
+            : "DRAW";
 
-      console.log(`⚽ ${homeCode} ${homeScore}-${awayScore} ${awayCode} → winner: ${winner}`);
+      console.log(
+        `⚽ ${homeCode} ${homeScore}-${awayScore} ${awayCode} → winner: ${winner}`,
+      );
       updates[match.id] = { winner, homeScore, awayScore };
     }
 
@@ -168,8 +183,9 @@ export const syncResults = async () => {
     // Single batch write to Firebase
     const db = getDatabase();
     await update(ref(db, "results"), updates);
-    console.log(`🎉 Synced ${Object.keys(updates).length} results in one write!`);
-
+    console.log(
+      `🎉 Synced ${Object.keys(updates).length} results in one write!`,
+    );
   } catch (e) {
     console.error("❌ Sync failed:", e);
   }
