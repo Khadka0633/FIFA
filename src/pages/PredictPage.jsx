@@ -4,7 +4,7 @@ import MatchCard from "../components/MatchCard";
 import SubmitPreview from "../components/SubmitPreview";
 import { savePredictions, getResults } from "../utils/firebase";
 import FlagImg from "../components/FlagImg";
-import { fetchLiveScores } from "../utils/resultsSync";
+
 
 
 export default function PredictPage({ player, onSubmitted }) {
@@ -13,7 +13,6 @@ export default function PredictPage({ player, onSubmitted }) {
   const [showPreview, setShowPreview] = useState(false);
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState("");
-  const [liveScores, setLiveScores] = useState({});
   const [results, setResults] = useState({});
 
   const totalMatches = GROUP_STAGE_MATCHES.length;
@@ -52,15 +51,6 @@ export default function PredictPage({ player, onSubmitted }) {
   };
 
 
-  useEffect(() => {
-  const sync = async () => {
-    const scores = await fetchLiveScores();
-    setLiveScores(scores);
-  };
-  sync();
-  const interval = setInterval(sync, 60000); // every 1 min
-  return () => clearInterval(interval);
-}, []);
 
 
 
@@ -151,7 +141,7 @@ useEffect(() => {
               onPick={handlePick}
               locked={false}
                result={results?.[match.id]}
-  liveScore={liveScores[match.id]}
+ 
             />
           ))}
         </div>

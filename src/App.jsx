@@ -18,27 +18,18 @@ export default function App() {
     if (window.location.hash === "#admin") setPage("admin");
   }, []);
 
+  // ✅ Single combined useEffect
   useEffect(() => {
     syncResults();
+    cleanOldMessages();
     const interval = setInterval(syncResults, 15 * 60 * 1000);
     return () => clearInterval(interval);
   }, []);
-
-
-  // inside your useEffect where syncResults is called
-useEffect(() => {
-  syncResults();
-  cleanOldMessages(); // ✅ runs once when app loads
-  
-  const interval = setInterval(syncResults, 15 * 60 * 1000);
-  return () => clearInterval(interval);
-}, []);
 
   const handleLogin = async (name, avatarFlag) => {
     const playerObj = { name, avatarFlag };
     setPlayer(playerObj);
     setPage("predict");
-
     try {
       const existing = await getPlayerData(name);
       if (existing?.locked) {
@@ -69,21 +60,10 @@ useEffect(() => {
     );
   }
 
-  if (page === "admin") {
-    return <AdminPage onExit={() => setPage(player ? "leaderboard" : "login")} />;
-  }
-
-  if (page === "login") {
-    return <LoginPage onLogin={handleLogin} onViewLeaderboard={handleViewLeaderboard} />;
-  }
-
-  if (page === "predict") {
-    return <PredictPage player={player} onSubmitted={handleSubmitted} />;
-  }
-
-  if (page === "leaderboard") {
-    return <LeaderboardPage player={player} myPredictions={myPredictions} onBack={() => setPage("login")} />;
-  }
+  if (page === "admin") return <AdminPage onExit={() => setPage(player ? "leaderboard" : "login")} />;
+  if (page === "login") return <LoginPage onLogin={handleLogin} onViewLeaderboard={handleViewLeaderboard} />;
+  if (page === "predict") return <PredictPage player={player} onSubmitted={handleSubmitted} />;
+  if (page === "leaderboard") return <LeaderboardPage player={player} myPredictions={myPredictions} onBack={() => setPage("login")} />;
 
   return null;
 }

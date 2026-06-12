@@ -2,7 +2,6 @@ import { useEffect, useState, useRef } from "react";
 import { getAllPlayers, getResults, sendChatMessage, getChat  } from "../utils/firebase";
 import { buildLeaderboard } from "../utils/scoring";
 import { GROUP_STAGE_MATCHES, getTeam, GROUPS } from "../data/matches";
-import { fetchLiveScores } from "../utils/resultsSync";
 import FlagImg from "../components/FlagImg";
 
 
@@ -12,8 +11,6 @@ const MEDAL = ["🥇", "🥈", "🥉"];
 export default function LeaderboardPage({ player, myPredictions, onBack }) {
   const [players, setPlayers] = useState({});
   const [results, setResults] = useState({});
-  const [liveScores, setLiveScores] = useState({});
-  const [lastUpdated, setLastUpdated] = useState(null);
   const [viewPlayer, setViewPlayer] = useState(null);
   const [tab, setTab] = useState("board");
 
@@ -26,23 +23,12 @@ export default function LeaderboardPage({ player, myPredictions, onBack }) {
     };
   }, []);
 
-  // Auto-refresh live scores every 60 seconds
-  useEffect(() => {
-    const refresh = async () => {
-      const live = await fetchLiveScores();
-      setLiveScores(live);
-      setLastUpdated(new Date());
-    };
-    refresh();
-    const interval = setInterval(refresh, 60 * 1000);
-    return () => clearInterval(interval);
-  }, []);
-
+ 
   const leaderboard = buildLeaderboard(players, results);
   const myRank = leaderboard.findIndex((p) => p.name === player.name) + 1;
   const myEntry = leaderboard.find((p) => p.name === player.name);
   const resultsCount = Object.keys(results).length;
-  const liveCount = Object.keys(liveScores).length;
+ 
 
   return (
     <div className="min-h-screen bg-[#001A3D]">
@@ -69,56 +55,33 @@ export default function LeaderboardPage({ player, myPredictions, onBack }) {
 
         {/* Tabs */}
         <div className="max-w-2xl mx-auto px-4 pb-3 flex gap-2">
-          {["board", "live", "chat", "mypicks", "knockout"].map((t) => (
-            <button
-              key={t}
-              onClick={() => setTab(t)}
-              className={`relative px-4 py-1.5 rounded-lg text-xs font-black uppercase tracking-wide transition-all ${
-                tab === t ? "bg-[#FFD700] text-[#001A3D]" : "bg-[#002657] text-[#7BA3D4] hover:bg-[#003F88]"
-              }`}
-            >
-              {t === "board" ? "🏆 Rankings" : t === "live" ? "🔴 Live" : t === "chat" ? "💬 Chat" : t === "mypicks" ? "⚽ My Picks" : "🔜 Knockout"}
-              {t === "live" && liveCount > 0 && (
-                <span className="absolute -top-1 -right-1 w-3.5 h-3.5 bg-red-500 rounded-full text-[7px] flex items-center justify-center text-white font-black animate-pulse">
-                  {liveCount}
-                </span>
-              )}
-            </button>
-          ))}
-        </div>
+  {["board", "chat", "mypicks", "knockout"].map((t) => (
+    <button
+      key={t}
+      onClick={() => setTab(t)}
+      className={`relative px-4 py-1.5 rounded-lg text-xs font-black uppercase tracking-wide transition-all ${
+        tab === t ? "bg-[#FFD700] text-[#001A3D]" : "bg-[#002657] text-[#7BA3D4] hover:bg-[#003F88]"
+      }`}
+    >
+      {t === "board" ? "🏆 Rankings"
+      : t === "chat" ? "💬 Chat"
+      : t === "mypicks" ? "⚽ My Picks"
+      : "🔜 Knockout"}
+    </button>
+  ))}
+</div>
+
+
+
       </div>
 
       <div className="max-w-2xl mx-auto px-4 py-5">
 
-        {/* Live scores tab */}
-        {tab === "live" && (
-          <LiveScoresTab
-            liveScores={liveScores}
-            lastUpdated={lastUpdated}
-            onRefresh={async () => {
-              const live = await fetchLiveScores();
-              setLiveScores(live);
-              setLastUpdated(new Date());
-            }}
-          />
-        )}
+        
 
         {tab === "board" && (
           <>
-            {/* Live scores mini banner */}
-            {liveCount > 0 && (
-              <div
-                onClick={() => setTab("live")}
-                className="cursor-pointer mb-4 bg-red-500/10 border border-red-500/30 rounded-xl px-4 py-3 flex items-center gap-3"
-              >
-                <span className="text-red-400 animate-pulse text-lg">🔴</span>
-                <div className="flex-1">
-                  <p className="text-red-400 font-black text-sm">{liveCount} match{liveCount > 1 ? "es" : ""} LIVE now!</p>
-                  <p className="text-[#4A6B8A] text-[10px]">Tap to see live scores</p>
-                </div>
-                <span className="text-[#4A6B8A] text-xs">→</span>
-              </div>
-            )}
+           
 
             {/* My rank card */}
             {myEntry && (
@@ -229,93 +192,7 @@ export default function LeaderboardPage({ player, myPredictions, onBack }) {
 }
 
 // ── Live Scores Tab ────────────────────────────────────────────────────────────
-function LiveScoresTab({ liveScores, lastUpdated, onRefresh }) {
-  const [refreshing, setRefreshing] = useState(false);
 
-  const handleRefresh = async () => {
-    setRefreshing(true);
-    await onRefresh();
-    setRefreshing(false);
-  };
-
-  const liveMatches = GROUP_STAGE_MATCHES.filter((m) => liveScores[m.id]);
-
-  return (
-    <div>
-      {/* Header row */}
-      <div className="flex items-center justify-between mb-4">
-        <div>
-          <h2 className="text-white font-black text-lg">🔴 Live Scores</h2>
-          {lastUpdated && (
-            <p className="text-[#4A6B8A] text-[10px]">
-              Updated {lastUpdated.toLocaleTimeString()} · auto-refreshes every 60s
-            </p>
-          )}
-        </div>
-        <button
-          onClick={handleRefresh}
-          disabled={refreshing}
-          className="bg-[#002657] border border-[#003F88] text-[#7BA3D4] hover:text-white hover:border-[#7BA3D4] text-xs font-bold px-3 py-2 rounded-lg transition-all"
-        >
-          {refreshing ? "⏳ Refreshing..." : "↻ Refresh"}
-        </button>
-      </div>
-
-      {liveMatches.length === 0 ? (
-        <div className="text-center py-20">
-          <p className="text-5xl mb-3">⏱️</p>
-          <p className="text-white font-black text-xl mb-1">No live matches</p>
-          <p className="text-[#7BA3D4] text-sm">Check back when the tournament starts!</p>
-          <p className="text-[#4A6B8A] text-xs mt-2">Scores refresh automatically every 60 seconds</p>
-        </div>
-      ) : (
-        <div className="space-y-3">
-          {liveMatches.map((match) => {
-            const score = liveScores[match.id];
-            const home = getTeam(match.home);
-            const away = getTeam(match.away);
-            return (
-              <div key={match.id} className="bg-[#002657] border border-red-500/40 rounded-2xl overflow-hidden">
-                {/* Live badge */}
-                <div className="flex items-center justify-between px-4 pt-3 pb-1">
-                  <span className="text-[#4A6B8A] text-[10px] uppercase tracking-wider">
-                    Group {match.group} · {match.venue}
-                  </span>
-                  <span className="flex items-center gap-1 bg-red-500/20 text-red-400 text-[9px] font-black px-2 py-0.5 rounded tracking-widest animate-pulse">
-                    🔴 LIVE {score.minute}'
-                  </span>
-                </div>
-
-                {/* Score row */}
-                <div className="flex items-center justify-between px-6 py-4">
-                  <div className="flex flex-col items-center gap-1.5 w-[35%]">
-                    <FlagImg iso={home.iso} size={48} className="rounded-md shadow-sm" />
-                    <span className="text-white text-sm font-bold text-center leading-tight">{home.name}</span>
-                  </div>
-
-                  <div className="flex flex-col items-center">
-                    <span className="text-white font-black text-4xl leading-none tracking-tight">
-                      {score.home} <span className="text-[#4A6B8A]">-</span> {score.away}
-                    </span>
-                    <span className="text-red-400 text-[10px] font-black mt-1 animate-pulse">LIVE</span>
-                  </div>
-
-                  <div className="flex flex-col items-center gap-1.5 w-[35%]">
-                    <FlagImg iso={away.iso} size={48} className="rounded-md shadow-sm" />
-                    <span className="text-white text-sm font-bold text-center leading-tight">{away.name}</span>
-                  </div>
-                </div>
-
-                {/* Red glow bottom bar */}
-                <div className="h-0.5 bg-red-500/60" />
-              </div>
-            );
-          })}
-        </div>
-      )}
-    </div>
-  );
-}
 function ChatTab({ player, myEntry }) {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");

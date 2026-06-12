@@ -1,13 +1,13 @@
 import { getTeam } from "../data/matches";
 import FlagImg from "./FlagImg";
 
-export default function MatchCard({ match, prediction, onPick, locked, result, liveScore }) {
+export default function MatchCard({ match, prediction, onPick, locked, result }) {
   const home = getTeam(match.home);
   const away = getTeam(match.away);
 
-  const isLive = liveScore?.status === "LIVE";
-const winner = result ? (typeof result === "object" ? result.winner : result) : null;
-const isFinished = winner !== null;
+  // ✅ removed isLive, just keep winner and isFinished
+  const winner = result ? (typeof result === "object" ? result.winner : result) : null;
+  const isFinished = winner !== null;
 
   const options = [
     { value: match.home, label: home.iso, sub: home.code },
@@ -18,7 +18,7 @@ const isFinished = winner !== null;
   return (
     <div className={`relative bg-[#002657] border rounded-xl overflow-hidden transition-all ${
       prediction ? "border-[#FFD700]/40" : "border-[#003F88]/60"
-    } ${isLive ? "border-red-500/60" : ""} ${locked ? "opacity-90" : "hover:border-[#7BA3D4]"}`}>
+    } ${locked ? "opacity-90" : "hover:border-[#7BA3D4]"}`}>
 
       {/* Group badge + date */}
       <div className="flex items-center justify-between px-3 pt-2.5 pb-0">
@@ -26,12 +26,7 @@ const isFinished = winner !== null;
           {match.date} · {match.venue}
         </p>
         <div className="flex items-center gap-1.5">
-          {isLive && (
-            <span className="flex items-center gap-1 bg-red-500/20 text-red-400 text-[9px] font-black px-1.5 py-0.5 rounded tracking-widest animate-pulse">
-              🔴 LIVE
-            </span>
-          )}
-          {isFinished && !isLive && (
+          {isFinished && (
             <span className="bg-green-500/10 text-green-400 text-[9px] font-black px-1.5 py-0.5 rounded tracking-widest">
               FT
             </span>
@@ -53,14 +48,10 @@ const isFinished = winner !== null;
 
         {/* VS / Score */}
         <div className="flex flex-col items-center flex-shrink-0">
-          {isLive && liveScore ? (
-            <span className="text-white font-black text-lg leading-none">
-              {liveScore.home} - {liveScore.away}
+          {isFinished && result?.homeScore != null ? (
+            <span className="text-green-400 font-black text-lg leading-none">
+              {result.homeScore} - {result.awayScore}
             </span>
-          )  : isFinished && result?.homeScore != null ? (
-    <span className="text-green-400 font-black text-lg leading-none">
-      {result.homeScore} - {result.awayScore}
-    </span>
           ) : (
             <span className="text-[#FFD700] text-xs font-black tracking-widest">VS</span>
           )}
@@ -104,10 +95,6 @@ const isFinished = winner !== null;
         <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#FFD700] opacity-70" />
       )}
 
-      {/* Live glow border */}
-      {isLive && (
-        <div className="absolute inset-0 rounded-xl ring-1 ring-red-500/40 pointer-events-none" />
-      )}
     </div>
   );
 }
