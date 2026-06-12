@@ -1,5 +1,6 @@
 import { setResult } from "./firebase";
 import { GROUP_STAGE_MATCHES } from "../data/matches";
+import { getDatabase, ref, update } from "firebase/database";
 
 const API_KEY = "8dc688a211df452c854e5115232ea6a6";
 
@@ -7,7 +8,7 @@ const TEAM_NAME_TO_CODE = {
   // Group A
   "Mexico": "MEX",
   "South Africa": "RSA",
-  "Korea Republic": "KOR",       // ✅ API uses this
+  "Korea Republic": "KOR",
   "South Korea": "KOR",
   "Czechia": "CZE",
   "Czech Republic": "CZE",
@@ -50,14 +51,14 @@ const TEAM_NAME_TO_CODE = {
   // Group G
   "Belgium": "BEL",
   "Egypt": "EGY",
-  "IR Iran": "IRN",              // ✅ API uses this
+  "IR Iran": "IRN",
   "Iran": "IRN",
   "New Zealand": "NZL",
 
   // Group H
   "Spain": "ESP",
   "Cape Verde": "CPV",
-  "Cape Verde Islands": "CPV",   // ✅ API sometimes uses this
+  "Cape Verde Islands": "CPV",
   "Cabo Verde": "CPV",
   "Uruguay": "URU",
   "Saudi Arabia": "KSA",
@@ -78,7 +79,7 @@ const TEAM_NAME_TO_CODE = {
   "Portugal": "POR",
   "DR Congo": "COD",
   "Congo DR": "COD",
-  "Congo, DR": "COD",            // ✅ API sometimes uses this
+  "Congo, DR": "COD",
   "Democratic Republic of Congo": "COD",
   "Uzbekistan": "UZB",
   "Colombia": "COL",
@@ -90,7 +91,6 @@ const TEAM_NAME_TO_CODE = {
   "Panama": "PAN",
 };
 
-// ✅ Fixed — handles null scores properly
 const getScore = (fixture) => {
   const ft = fixture.score?.fullTime;
   const reg = fixture.score?.regularTime;
@@ -103,27 +103,52 @@ const getScore = (fixture) => {
   };
 };
 
-// ✅ Only syncResults — fetchLiveScores removed
 export const syncResults = async () => {
+  console.log("🔄 syncResults called at", new Date().toLocaleTimeString());
   try {
+    const bustCache = Date.now();
+    const apiUrl = `https://api.football-data.org/v4/competitions/WC/matches?status=FINISHED&_=${bustCache}`;
+
+    console.log("📡 Fetching from API...");
     const res = await fetch(
-      `https://api.allorigins.win/raw?url=${encodeURIComponent("https://api.football-data.org/v4/competitions/WC/matches?status=FINISHED")}`,
+      `https://corsproxy.io/?${encodeURIComponent(apiUrl)}`,
       { headers: { "X-Auth-Token": API_KEY } }
     );
+
+    if (!res.ok) {
+      console.error("❌ HTTP error:", res.status, res.statusText);
+      return;
+    }
+
     const data = await res.json();
     const matches = data.matches;
+    console.log("✅ API response received, matches count:", matches?.length);
 
-    if (!matches || matches.length === 0) return;
+    if (!matches || matches.length === 0) {
+      console.warn("⚠️ No finished matches returned");
+      return;
+    }
+
+    // Collect all updates into one object — single Firebase write instead of N writes
+    const updates = {};
 
     for (const fixture of matches) {
       const homeCode = TEAM_NAME_TO_CODE[fixture.homeTeam.name];
       const awayCode = TEAM_NAME_TO_CODE[fixture.awayTeam.name];
-      if (!homeCode || !awayCode) continue;
+
+      if (!homeCode || !awayCode) {
+        console.warn("⚠️ Unknown team name:", fixture.homeTeam.name, "vs", fixture.awayTeam.name);
+        continue;
+      }
 
       const match = GROUP_STAGE_MATCHES.find(
         (m) => m.home === homeCode && m.away === awayCode
       );
-      if (!match) continue;
+
+      if (!match) {
+        console.warn("⚠️ Match not found in schedule:", homeCode, "vs", awayCode);
+        continue;
+      }
 
       const { home: homeScore, away: awayScore } = getScore(fixture);
       const winner =
@@ -131,10 +156,20 @@ export const syncResults = async () => {
         awayScore > homeScore ? awayCode :
         "DRAW";
 
-      await setResult(match.id, winner, homeScore, awayScore);
+      console.log(`⚽ ${homeCode} ${homeScore}-${awayScore} ${awayCode} → winner: ${winner}`);
+      updates[match.id] = { winner, homeScore, awayScore };
     }
 
-    console.log("✅ Results synced!");
+    if (Object.keys(updates).length === 0) {
+      console.log("ℹ️ No matches to update");
+      return;
+    }
+
+    // Single batch write to Firebase
+    const db = getDatabase();
+    await update(ref(db, "results"), updates);
+    console.log(`🎉 Synced ${Object.keys(updates).length} results in one write!`);
+
   } catch (e) {
     console.error("❌ Sync failed:", e);
   }
