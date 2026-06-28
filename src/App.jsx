@@ -25,12 +25,10 @@ export default function App() {
   const [knockoutUnlocked, setKnockoutUnlocked] = useState(false);
   const [knockoutTeams, setKnockoutTeams] = useState({});
 
-  // ── Admin route ───────────────────────────────────────────────────────────
   useEffect(() => {
     if (window.location.hash === "#admin") setPage("admin");
   }, []);
 
-  // ── Sync results from API every 15 mins ───────────────────────────────────
   useEffect(() => {
     syncResults();
     syncKnockoutResults();
@@ -42,7 +40,6 @@ export default function App() {
     return () => clearInterval(interval);
   }, []);
 
-  // ── Listen to knockout unlock flag + knockout teams from Firebase ──────────
   useEffect(() => {
     const u1 = getKnockoutUnlocked(setKnockoutUnlocked);
     const u2 = getKnockoutTeams(setKnockoutTeams);
@@ -52,7 +49,7 @@ export default function App() {
     };
   }, []);
 
-  // ── Auto-sync knockoutTeams whenever group results change ─────────────────
+  // Auto-sync knockoutTeams whenever group results change
   useEffect(() => {
     const unsub = getResults((results) => {
       syncKnockoutTeams(results);
@@ -60,7 +57,6 @@ export default function App() {
     return () => { if (typeof unsub === "function") unsub(); };
   }, []);
 
-  // ── Auth handlers ─────────────────────────────────────────────────────────
   const handleLogin = async (name, avatarFlag) => {
     setLoading(true);
     const playerObj = { name, avatarFlag };
@@ -106,7 +102,6 @@ export default function App() {
     setPage("leaderboard");
   };
 
-  // ── Loading screen ────────────────────────────────────────────────────────
   if (loading) {
     return (
       <div className="min-h-screen bg-[#001A3D] flex items-center justify-center">
@@ -118,7 +113,6 @@ export default function App() {
     );
   }
 
-  // ── Routes ────────────────────────────────────────────────────────────────
   if (page === "admin") return (
     <AdminPage
       onExit={() => setPage(player ? "leaderboard" : "login")}
@@ -143,6 +137,7 @@ export default function App() {
   if (page === "knockout") return (
     <KnockoutPredictPage
       player={player}
+      knockoutTeams={knockoutTeams}
       alreadyLocked={!!player?.knockoutLocked}
       existingPredictions={player?.knockoutPredictions || {}}
       onSubmitted={handleKnockoutSubmitted}
