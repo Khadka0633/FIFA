@@ -1,5 +1,5 @@
 import { GROUP_STAGE_MATCHES } from "../data/matches";
-import { KNOCKOUT_MATCHES } from "../data/knockoutMatches";
+import { KNOCKOUT_MATCHES } from "../data/KnockoutMatches";
 import { getDatabase, ref, update, get } from "firebase/database";
 
 const IS_DEV = import.meta.env.DEV;
