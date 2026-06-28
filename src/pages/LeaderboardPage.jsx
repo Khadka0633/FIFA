@@ -4,7 +4,7 @@ import { buildLeaderboard } from "../utils/scoring";
 import { GROUP_STAGE_MATCHES, getTeam, GROUPS } from "../data/matches";
 import FlagImg from "../components/FlagImg";
 import { getKnockoutResults, getKnockoutUnlocked } from "../utils/firebase";
-import { buildKnockoutLeaderboard } from "../utils/knockoutScoring";
+import { buildKnockoutLeaderboard } from "../utils/KnockoutScoring";
 
 const MEDAL = ["🥇", "🥈", "🥉"];
 
