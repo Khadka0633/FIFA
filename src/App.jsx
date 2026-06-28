@@ -3,8 +3,13 @@ import { initFirebase, getPlayerData, cleanOldMessages } from "./utils/firebase"
 import LoginPage from "./pages/LoginPage";
 import PredictPage from "./pages/PredictPage";
 import LeaderboardPage from "./pages/LeaderboardPage";
-import { syncResults } from "./utils/resultsSync";
+import { syncResults, syncKnockoutResults } from "./utils/resultsSync";
 import AdminPage from "./pages/AdminPage";
+import KnockoutPredictPage from "./pages/KnockoutPredictPage";
+import { getKnockoutUnlocked, getKnockoutTeams } from "./utils/firebase";
+import { getKnockoutTeams as listenKnockoutTeams } from "./utils/qualifyTeams";
+import { getResults } from "./utils/firebase";
+import { syncKnockoutTeams } from "./utils/qualifyTeams";
 
 initFirebase();
 
@@ -13,12 +18,13 @@ export default function App() {
   const [player, setPlayer] = useState(null);
   const [myPredictions, setMyPredictions] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [knockoutUnlocked, setKnockoutUnlocked] = useState(false);
+  const [knockoutTeams, setKnockoutTeams] = useState({});
 
   useEffect(() => {
     if (window.location.hash === "#admin") setPage("admin");
   }, []);
 
-  // ✅ Single combined useEffect
   useEffect(() => {
     syncResults();
     cleanOldMessages();
@@ -26,17 +32,52 @@ export default function App() {
     return () => clearInterval(interval);
   }, []);
 
+  useEffect(() => {
+    const u1 = getKnockoutUnlocked(setKnockoutUnlocked);
+    const u2 = listenKnockoutTeams(setKnockoutTeams);
+    return () => {
+      if (typeof u1 === "function") u1();
+      if (typeof u2 === "function") u2();
+    };
+  }, []);
+
+  useEffect(() => {
+  const unsub = getResults((results) => {
+    syncKnockoutTeams(results);
+  });
+  return () => { if (typeof unsub === "function") unsub(); };
+}, []);
+
+
+  useEffect(() => {
+  syncResults();
+  syncKnockoutResults();
+  cleanOldMessages();
+  const interval = setInterval(() => {
+    syncResults();
+    syncKnockoutResults();
+  }, 15 * 60 * 1000);
+  return () => clearInterval(interval);
+}, []);
+
   const handleLogin = async (name, avatarFlag) => {
+    setLoading(true);
     const playerObj = { name, avatarFlag };
     setPlayer(playerObj);
-    setPage("predict");
     try {
       const existing = await getPlayerData(name);
       if (existing?.locked) {
         setMyPredictions(existing.predictions);
+        // Merge knockout data into player object
+        setPlayer({ ...playerObj, knockoutLocked: existing.knockoutLocked, knockoutPredictions: existing.knockoutPredictions });
         setPage("leaderboard");
+      } else {
+        setPage("predict");
       }
-    } catch (e) {}
+    } catch (e) {
+      setPage("predict");
+    }
+    setLoading(false);
   };
 
   const handleViewLeaderboard = () => {
@@ -46,6 +87,11 @@ export default function App() {
 
   const handleSubmitted = (predictions) => {
     setMyPredictions(predictions);
+    setPage("leaderboard");
+  };
+
+  const handleKnockoutSubmitted = (preds) => {
+    setPlayer(prev => ({ ...prev, knockoutLocked: true, knockoutPredictions: preds }));
     setPage("leaderboard");
   };
 
@@ -60,10 +106,37 @@ export default function App() {
     );
   }
 
-  if (page === "admin") return <AdminPage onExit={() => setPage(player ? "leaderboard" : "login")} />;
-  if (page === "login") return <LoginPage onLogin={handleLogin} onViewLeaderboard={handleViewLeaderboard} />;
-  if (page === "predict") return <PredictPage player={player} onSubmitted={handleSubmitted} />;
-  if (page === "leaderboard") return <LeaderboardPage player={player} myPredictions={myPredictions} onBack={() => setPage("login")} />;
+  if (page === "admin") return (
+    <AdminPage
+      onExit={() => setPage(player ? "leaderboard" : "login")}
+      knockoutTeams={knockoutTeams}
+    />
+  );
+  if (page === "login") return (
+    <LoginPage onLogin={handleLogin} onViewLeaderboard={handleViewLeaderboard} />
+  );
+  if (page === "predict") return (
+    <PredictPage player={player} onSubmitted={handleSubmitted} />
+  );
+  if (page === "knockout") return (
+    <KnockoutPredictPage
+      player={player}
+      knockoutTeams={knockoutTeams}
+      alreadyLocked={!!player?.knockoutLocked}
+      existingPredictions={player?.knockoutPredictions || {}}
+      onSubmitted={handleKnockoutSubmitted}
+    />
+  );
+  if (page === "leaderboard") return (
+    <LeaderboardPage
+      player={player}
+      myPredictions={myPredictions}
+      knockoutUnlocked={knockoutUnlocked}
+      knockoutTeams={knockoutTeams}
+      onBack={() => setPage("login")}
+      onGoKnockout={() => setPage("knockout")}
+    />
+  );
 
   return null;
 }

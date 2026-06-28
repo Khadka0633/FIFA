@@ -145,7 +145,7 @@ export const GROUP_STAGE_MATCHES = [
   { id:"J2", group:"J", home:"AUT", away:"JOR",  date:"Jun 17", venue:"Santa Clara" },
   { id:"J3", group:"J", home:"ARG", away:"AUT",  date:"Jun 22", venue:"Arlington" },
   { id:"J4", group:"J", home:"JOR", away:"ALG",  date:"Jun 22", venue:"Santa Clara" },
-  { id:"J5", group:"J", home:"ARG", away:"JOR",  date:"Jun 27", venue:"Houston" },
+  { id:"J5", group:"J", home:"JOR", away:"ARG",  date:"Jun 27", venue:"Houston" },
   { id:"J6", group:"J", home:"ALG", away:"AUT",  date:"Jun 27", venue:"Chicago" },
 
   // ── GROUP K ──

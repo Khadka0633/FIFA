@@ -1,34 +1,41 @@
 import { useEffect, useState, useRef } from "react";
-import { getAllPlayers, getResults, sendChatMessage, getChat  } from "../utils/firebase";
+import { getAllPlayers, getResults, sendChatMessage, getChat } from "../utils/firebase";
 import { buildLeaderboard } from "../utils/scoring";
 import { GROUP_STAGE_MATCHES, getTeam, GROUPS } from "../data/matches";
 import FlagImg from "../components/FlagImg";
-
-
+import { getKnockoutResults, getKnockoutUnlocked } from "../utils/firebase";
+import { buildKnockoutLeaderboard } from "../utils/knockoutScoring";
 
 const MEDAL = ["🥇", "🥈", "🥉"];
 
-export default function LeaderboardPage({ player, myPredictions, onBack }) {
+export default function LeaderboardPage({ player, myPredictions, onBack, onGoKnockout }) {
   const [players, setPlayers] = useState({});
   const [results, setResults] = useState({});
   const [viewPlayer, setViewPlayer] = useState(null);
   const [tab, setTab] = useState("board");
+  const [knockoutResults, setKnockoutResults] = useState({});
+  const [knockoutUnlocked, setKnockoutUnlocked] = useState(false);
 
   useEffect(() => {
     const unsubPlayers = getAllPlayers(setPlayers);
     const unsubResults = getResults(setResults);
+    const unsubKOR = getKnockoutResults(setKnockoutResults);
+    const unsubKOU = getKnockoutUnlocked(setKnockoutUnlocked);
     return () => {
       if (typeof unsubPlayers === "function") unsubPlayers();
       if (typeof unsubResults === "function") unsubResults();
+      if (typeof unsubKOR === "function") unsubKOR();
+      if (typeof unsubKOU === "function") unsubKOU();
     };
   }, []);
 
- 
   const leaderboard = buildLeaderboard(players, results);
   const myRank = leaderboard.findIndex((p) => p.name === player.name) + 1;
   const myEntry = leaderboard.find((p) => p.name === player.name);
   const resultsCount = Object.keys(results).length;
- 
+  const knockoutLeaderboard = buildKnockoutLeaderboard(players, knockoutResults);
+  const myKOEntry = knockoutLeaderboard.find((p) => p.name === player.name);
+  const myKORank = knockoutLeaderboard.findIndex((p) => p.name === player.name) + 1;
 
   return (
     <div className="min-h-screen bg-[#001A3D]">
@@ -54,37 +61,39 @@ export default function LeaderboardPage({ player, myPredictions, onBack }) {
         </div>
 
         {/* Tabs */}
-        <div className="max-w-2xl mx-auto px-4 pb-3 flex gap-2">
-  {["board", "chat", "mypicks","fixtures", "knockout"].map((t) => (
-    <button
-      key={t}
-      onClick={() => setTab(t)}
-      className={`relative px-4 py-1.5 rounded-lg text-xs font-black uppercase tracking-wide transition-all ${
-        tab === t ? "bg-[#FFD700] text-[#001A3D]" : "bg-[#002657] text-[#7BA3D4] hover:bg-[#003F88]"
-      }`}
-    >
-      {t === "board" ? "🏆 Rankings"
-      : t === "chat" ? "💬 Chat"
-      : t === "mypicks" ? "⚽ My Picks"
-      : t === "fixtures" ? "📅 Fixtures"
-      : "🔜 Knockout"}
-    </button>
-  ))}
-</div>
-
-
-
+        <div className="max-w-2xl mx-auto px-4 pb-3 flex gap-2 overflow-x-auto scrollbar-none">
+          {["board", "chat", "mypicks", "fixtures", "knockout"].map((t) => (
+            <button
+              key={t}
+              onClick={() => setTab(t)}
+              className={`relative flex-shrink-0 px-4 py-1.5 rounded-lg text-xs font-black uppercase tracking-wide transition-all ${
+                tab === t ? "bg-[#FFD700] text-[#001A3D]" : "bg-[#002657] text-[#7BA3D4] hover:bg-[#003F88]"
+              }`}
+            >
+              {t === "board"
+                ? "🏆 Rankings"
+                : t === "chat"
+                ? "💬 Chat"
+                : t === "mypicks"
+                ? "⚽ My Picks"
+                : t === "fixtures"
+                ? "📅 Fixtures"
+                : knockoutUnlocked
+                ? "🏆 Knockout"
+                : "🔜 Knockout"}
+              {/* Dot indicator for knockout when unlocked but not yet submitted */}
+              {t === "knockout" && knockoutUnlocked && !player?.knockoutLocked && (
+                <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-green-400 rounded-full animate-pulse" />
+              )}
+            </button>
+          ))}
+        </div>
       </div>
 
       <div className="max-w-2xl mx-auto px-4 py-5">
-
-        
-
+        {/* ── Rankings Tab ── */}
         {tab === "board" && (
           <>
-           
-
-            {/* My rank card */}
             {myEntry && (
               <div className="bg-[#FFD700]/10 border border-[#FFD700]/30 rounded-2xl px-5 py-4 mb-5 flex items-center gap-4">
                 <span className="text-4xl">{myRank <= 3 ? MEDAL[myRank - 1] : `#${myRank}`}</span>
@@ -99,7 +108,6 @@ export default function LeaderboardPage({ player, myPredictions, onBack }) {
               </div>
             )}
 
-            {/* Results progress bar */}
             {resultsCount > 0 && (
               <div className="mb-4 bg-[#002657] border border-[#003F88] rounded-xl px-4 py-3">
                 <div className="flex justify-between text-xs mb-1.5">
@@ -115,7 +123,6 @@ export default function LeaderboardPage({ player, myPredictions, onBack }) {
               </div>
             )}
 
-            {/* All players */}
             <div className="space-y-2">
               {leaderboard.length === 0 ? (
                 <div className="text-center py-16">
@@ -155,14 +162,13 @@ export default function LeaderboardPage({ player, myPredictions, onBack }) {
           </>
         )}
 
-        {tab === "chat" && (
-  <ChatTab player={player} myEntry={myEntry} />
-)}
+        {/* ── Chat Tab ── */}
+        {tab === "chat" && <ChatTab player={player} myEntry={myEntry} />}
 
+        {/* ── My Picks Tab ── */}
         {tab === "mypicks" && myEntry && (
           <PlayerPicksView player={myEntry} results={results} highlight />
         )}
-
         {tab === "mypicks" && !myEntry && (
           <div className="text-center py-16">
             <p className="text-5xl mb-3">⚽</p>
@@ -171,33 +177,27 @@ export default function LeaderboardPage({ player, myPredictions, onBack }) {
           </div>
         )}
 
-        {tab === "fixtures" && (
-  <FixturesTab results={results} />
-)}
+        {/* ── Fixtures Tab ── */}
+        {tab === "fixtures" && <FixturesTab results={results} />}
 
+        {/* ── Knockout Tab ── */}
         {tab === "knockout" && (
-          <div className="text-center py-20">
-            <p className="text-6xl mb-4">🔜</p>
-            <h3 className="text-white font-black text-2xl mb-2">Knockout Stage</h3>
-            <p className="text-[#7BA3D4] text-sm max-w-xs mx-auto">
-              The knockout bracket opens once the group stage concludes and the Round of 32 teams are confirmed.
-            </p>
-            <div className="mt-6 grid grid-cols-2 gap-3 max-w-xs mx-auto opacity-30">
-              {[...Array(8)].map((_, i) => (
-                <div key={i} className="bg-[#002657] border border-[#003F88] rounded-lg py-4 flex items-center justify-center">
-                  <span className="text-[#4A6B8A] text-xs font-bold">TBD</span>
-                </div>
-              ))}
-            </div>
-          </div>
+          <KnockoutLeaderboardTab
+            leaderboard={knockoutLeaderboard}
+            player={player}
+            myEntry={myKOEntry}
+            myRank={myKORank}
+            knockoutResults={knockoutResults}
+            knockoutUnlocked={knockoutUnlocked}
+            onGoKnockout={onGoKnockout}
+          />
         )}
       </div>
     </div>
   );
 }
 
-// ── Live Scores Tab ────────────────────────────────────────────────────────────
-
+// ── Chat Tab ──────────────────────────────────────────────────────────────────
 function ChatTab({ player, myEntry }) {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
@@ -209,7 +209,6 @@ function ChatTab({ player, myEntry }) {
     return () => { if (typeof unsub === "function") unsub(); };
   }, []);
 
-  // Auto-scroll to bottom on new messages
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
@@ -228,7 +227,7 @@ function ChatTab({ player, myEntry }) {
     return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
   };
 
-  const canChat = !!myEntry; // only submitted players
+  const canChat = !!myEntry;
 
   return (
     <div className="flex flex-col h-[70vh]">
@@ -237,7 +236,6 @@ function ChatTab({ player, myEntry }) {
         <p className="text-[#4A6B8A] text-[10px]">Trash talk, predictions, celebrations — all welcome</p>
       </div>
 
-      {/* Messages */}
       <div className="flex-1 overflow-y-auto space-y-2 pr-1 mb-3">
         {messages.length === 0 ? (
           <div className="text-center py-16">
@@ -253,8 +251,8 @@ function ChatTab({ player, myEntry }) {
                 <FlagImg iso={msg.avatarFlag?.iso} size={24} className="rounded-sm flex-shrink-0 mb-0.5" />
                 <div className={`max-w-[75%] ${isMe ? "items-end" : "items-start"} flex flex-col gap-0.5`}>
                   <span className={`text-[9px] text-[#4A6B8A] font-medium px-1 ${isMe ? "text-right" : "text-left"}`}>
-  {msg.name} · {formatTime(msg.timestamp)}
-</span>
+                    {msg.name} · {formatTime(msg.timestamp)}
+                  </span>
                   <div className={`px-3 py-2 rounded-2xl text-sm leading-snug ${
                     isMe
                       ? "bg-[#FFD700] text-[#001A3D] font-semibold rounded-br-sm"
@@ -270,7 +268,6 @@ function ChatTab({ player, myEntry }) {
         <div ref={bottomRef} />
       </div>
 
-      {/* Input */}
       {canChat ? (
         <div className="flex gap-2 items-center">
           <FlagImg iso={player.avatarFlag?.iso} size={28} className="rounded-sm flex-shrink-0" />
@@ -300,6 +297,7 @@ function ChatTab({ player, myEntry }) {
   );
 }
 
+// ── Player Picks View ─────────────────────────────────────────────────────────
 function PlayerPicksView({ player, results, highlight }) {
   const totalResults = Object.keys(results).length;
 
@@ -323,27 +321,20 @@ function PlayerPicksView({ player, results, highlight }) {
             <p className="text-[#FFD700] text-[10px] font-black uppercase tracking-widest mb-1.5">Group {group}</p>
             {gMatches.map((match) => {
               const pred = player.predictions?.[match.id];
-
-              // ✅ Fix — extract winner from object or string
               const resultRaw = results[match.id];
               const winner = resultRaw
-                ? (typeof resultRaw === "object" ? resultRaw.winner : resultRaw)
+                ? typeof resultRaw === "object" ? resultRaw.winner : resultRaw
                 : null;
-
               const home = getTeam(match.home);
               const away = getTeam(match.away);
               const isCorrect = winner && pred === winner;
 
               return (
                 <div key={match.id} className="flex items-center text-xs py-1.5 border-b border-[#003F88]/50 last:border-0 gap-1.5">
-                  {/* Match teams */}
                   <FlagImg iso={home.iso} size={16} className="rounded-sm flex-shrink-0" />
                   <span className="text-[#4A6B8A] flex-shrink-0">{home.code} v {away.code}</span>
                   <FlagImg iso={away.iso} size={16} className="rounded-sm flex-shrink-0" />
-
                   <span className="flex-1" />
-
-                  {/* User's prediction only */}
                   {pred === "DRAW" ? (
                     <span className="text-[#7BA3D4] flex-shrink-0">🤝 Draw</span>
                   ) : pred ? (
@@ -354,8 +345,6 @@ function PlayerPicksView({ player, results, highlight }) {
                   ) : (
                     <span className="text-[#4A6B8A] flex-shrink-0">—</span>
                   )}
-
-                  {/* ✅ Correct / wrong badge */}
                   {winner && (
                     <span className={`font-black w-6 text-right flex-shrink-0 ${isCorrect ? "text-green-400" : "text-red-400"}`}>
                       {isCorrect ? "+2" : "✗"}
@@ -371,7 +360,7 @@ function PlayerPicksView({ player, results, highlight }) {
   );
 }
 
-
+// ── Fixtures Tab ──────────────────────────────────────────────────────────────
 function FixturesTab({ results }) {
   const allDates = [...new Set(GROUP_STAGE_MATCHES.map((m) => m.date))]
     .sort((a, b) => new Date(`${a} 2026`) - new Date(`${b} 2026`));
@@ -379,10 +368,8 @@ function FixturesTab({ results }) {
   const today = `Jun ${new Date().getDate()}`;
   const defaultDate = allDates.includes(today) ? today : allDates[0];
   const [activeDate, setActiveDate] = useState(defaultDate);
-
   const scrollRef = useRef(null);
 
-  // Auto-scroll to active date tab
   useEffect(() => {
     const container = scrollRef.current;
     if (!container) return;
@@ -396,7 +383,6 @@ function FixturesTab({ results }) {
 
   return (
     <div>
-      {/* Date tabs */}
       <div
         ref={scrollRef}
         className="flex gap-1.5 overflow-x-auto pb-3 mb-4"
@@ -404,42 +390,29 @@ function FixturesTab({ results }) {
       >
         {allDates.map((date) => {
           const isActive = activeDate === date;
-          const allFinished = GROUP_STAGE_MATCHES
-            .filter((m) => m.date === date)
-            .every((m) => results[m.id]);
-          const someResult = GROUP_STAGE_MATCHES
-            .filter((m) => m.date === date)
-            .some((m) => results[m.id]);
-
+          const allFinished = GROUP_STAGE_MATCHES.filter((m) => m.date === date).every((m) => results[m.id]);
+          const someResult = GROUP_STAGE_MATCHES.filter((m) => m.date === date).some((m) => results[m.id]);
           return (
             <button
               key={date}
               data-active={isActive}
               onClick={() => setActiveDate(date)}
               className={`flex-shrink-0 px-3 py-1.5 rounded-lg text-xs font-black transition-all relative ${
-                isActive
-                  ? "bg-[#FFD700] text-[#001A3D]"
-                  : "bg-[#002657] text-[#7BA3D4] hover:bg-[#003F88]"
+                isActive ? "bg-[#FFD700] text-[#001A3D]" : "bg-[#002657] text-[#7BA3D4] hover:bg-[#003F88]"
               }`}
             >
               {date}
-              {allFinished && (
-                <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-green-400 rounded-full" />
-              )}
-              {someResult && !allFinished && (
-                <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-yellow-400 rounded-full" />
-              )}
+              {allFinished && <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-green-400 rounded-full" />}
+              {someResult && !allFinished && <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-yellow-400 rounded-full" />}
             </button>
           );
         })}
       </div>
 
-      {/* Match count */}
       <p className="text-[#4A6B8A] text-[10px] uppercase tracking-wider mb-3">
         {dateMatches.length} matches · {dateMatches.filter((m) => results[m.id]).length} results in
       </p>
 
-      {/* Matches */}
       <div className="space-y-2">
         {dateMatches.map((match) => {
           const home = getTeam(match.home);
@@ -457,30 +430,19 @@ function FixturesTab({ results }) {
                 isFinished ? "border-[#003F88]" : "border-[#003F88]/50"
               }`}
             >
-              {/* Group badge */}
               <span className="text-[#FFD700] text-[9px] font-black bg-[#FFD700]/10 px-1.5 py-0.5 rounded flex-shrink-0">
                 {match.group}
               </span>
-
-              {/* Home */}
               <div className="flex items-center gap-2 flex-1 justify-end">
                 <span className={`text-sm font-bold truncate ${
-                  isFinished
-                    ? winner === match.home ? "text-white" : "text-[#4A6B8A]"
-                    : "text-[#7BA3D4]"
-                }`}>
-                  {home.code}
-                </span>
+                  isFinished ? winner === match.home ? "text-white" : "text-[#4A6B8A]" : "text-[#7BA3D4]"
+                }`}>{home.code}</span>
                 <FlagImg iso={home.iso} size={24} className="rounded-sm flex-shrink-0" />
               </div>
-
-              {/* Score / VS */}
               <div className="flex flex-col items-center w-16 flex-shrink-0">
                 {isFinished && homeScore != null ? (
                   <>
-                    <span className="text-white font-black text-base leading-none">
-                      {homeScore} - {awayScore}
-                    </span>
+                    <span className="text-white font-black text-base leading-none">{homeScore} - {awayScore}</span>
                     {winner === "DRAW"
                       ? <span className="text-[#7BA3D4] text-[9px] font-black mt-0.5">DRAW</span>
                       : <span className="text-green-400 text-[9px] font-black tracking-widest mt-0.5">FT</span>
@@ -493,22 +455,125 @@ function FixturesTab({ results }) {
                   </>
                 )}
               </div>
-
-              {/* Away */}
               <div className="flex items-center gap-2 flex-1">
                 <FlagImg iso={away.iso} size={24} className="rounded-sm flex-shrink-0" />
                 <span className={`text-sm font-bold truncate ${
-                  isFinished
-                    ? winner === match.away ? "text-white" : "text-[#4A6B8A]"
-                    : "text-[#7BA3D4]"
-                }`}>
-                  {away.code}
-                </span>
+                  isFinished ? winner === match.away ? "text-white" : "text-[#4A6B8A]" : "text-[#7BA3D4]"
+                }`}>{away.code}</span>
               </div>
             </div>
           );
         })}
       </div>
     </div>
+  );
+}
+
+// ── Knockout Leaderboard Tab ──────────────────────────────────────────────────
+function KnockoutLeaderboardTab({ leaderboard, player, myEntry, myRank, knockoutResults, knockoutUnlocked, onGoKnockout }) {
+  const resultsCount = Object.keys(knockoutResults).length;
+
+  if (!knockoutUnlocked) {
+    return (
+      <div className="text-center py-20">
+        <p className="text-6xl mb-4">🔒</p>
+        <h3 className="text-white font-black text-2xl mb-2">Knockout Stage Locked</h3>
+        <p className="text-[#7BA3D4] text-sm max-w-xs mx-auto">
+          The admin hasn't opened knockout predictions yet. Check back soon!
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <>
+      {/* CTA button if player hasn't submitted knockout picks yet */}
+      {!player?.knockoutLocked && onGoKnockout && (
+        <div className="mb-5 bg-[#FFD700]/10 border border-[#FFD700]/30 rounded-2xl px-5 py-4">
+          <p className="text-[#FFD700] font-black text-base mb-1">🏆 Knockout predictions are open!</p>
+          <p className="text-[#7BA3D4] text-xs mb-3">Submit your picks for the Round of 32 through the Final.</p>
+          <button
+            onClick={onGoKnockout}
+            className="w-full bg-[#FFD700] hover:bg-[#FFC200] text-[#001A3D] font-black py-3 rounded-xl transition-all hover:scale-[1.02] active:scale-[0.98]"
+          >
+            Submit My Knockout Predictions →
+          </button>
+        </div>
+      )}
+
+      {/* Already locked badge */}
+      {player?.knockoutLocked && (
+        <div className="mb-5 bg-green-500/10 border border-green-500/30 rounded-xl px-4 py-3 flex items-center gap-2">
+          <span className="text-green-400 text-lg">🔒</span>
+          <p className="text-green-400 text-sm font-bold">Your knockout predictions are locked in. Good luck!</p>
+        </div>
+      )}
+
+      {/* My rank card */}
+      {myEntry && (
+        <div className="bg-[#FFD700]/10 border border-[#FFD700]/30 rounded-2xl px-5 py-4 mb-5 flex items-center gap-4">
+          <span className="text-4xl">{myRank <= 3 ? ["🥇", "🥈", "🥉"][myRank - 1] : `#${myRank}`}</span>
+          <div className="flex-1">
+            <p className="text-[#FFD700] font-black text-lg leading-tight">{player.name}</p>
+            <p className="text-[#7BA3D4] text-xs">Knockout rank</p>
+          </div>
+          <div className="text-right">
+            <p className="text-white font-black text-2xl">{myEntry.score}</p>
+            <p className="text-[#4A6B8A] text-[10px] uppercase">{myEntry.correct}/{myEntry.total} correct</p>
+          </div>
+        </div>
+      )}
+
+      {/* Progress bar */}
+      {resultsCount > 0 && (
+        <div className="mb-4 bg-[#002657] border border-[#003F88] rounded-xl px-4 py-3">
+          <div className="flex justify-between text-xs mb-1.5">
+            <span className="text-[#7BA3D4]">Knockout progress</span>
+            <span className="text-[#FFD700] font-bold">{resultsCount}/31 results in</span>
+          </div>
+          <div className="h-1.5 bg-[#001A3D] rounded-full overflow-hidden">
+            <div
+              className="h-full bg-[#FFD700] rounded-full transition-all duration-500"
+              style={{ width: `${Math.min(100, (resultsCount / 31) * 100)}%` }}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Leaderboard */}
+      {leaderboard.length === 0 ? (
+        <div className="text-center py-16">
+          <p className="text-5xl mb-3">🏆</p>
+          <p className="text-[#7BA3D4] font-medium">No knockout predictions submitted yet.</p>
+          <p className="text-[#4A6B8A] text-sm mt-1">Be the first to lock in your picks!</p>
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {leaderboard.map((p, i) => (
+            <div
+              key={p.name}
+              className={`flex items-center gap-3 px-4 py-3 rounded-xl border ${
+                p.name === player.name
+                  ? "border-[#FFD700]/40 bg-[#FFD700]/5"
+                  : "border-[#003F88] bg-[#002657]"
+              }`}
+            >
+              <span className="text-xl w-7 text-center flex-shrink-0">
+                {i < 3
+                  ? ["🥇", "🥈", "🥉"][i]
+                  : <span className="text-[#4A6B8A] text-sm font-bold">#{i + 1}</span>
+                }
+              </span>
+              <FlagImg iso={p.avatarFlag?.iso} size={24} className="rounded-sm flex-shrink-0" />
+              <span className="text-white font-bold flex-1 truncate">{p.name}</span>
+              <div className="text-right flex-shrink-0">
+                <p className="text-[#FFD700] font-black text-lg leading-tight">{p.score} pts</p>
+                <p className="text-[#4A6B8A] text-[9px]">{p.correct}/{p.total} correct</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </>
   );
 }
