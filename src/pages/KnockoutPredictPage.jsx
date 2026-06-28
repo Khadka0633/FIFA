@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { KNOCKOUT_MATCHES, KNOCKOUT_ROUNDS } from "../data/knockoutMatches";
+import { KNOCKOUT_MATCHES, KNOCKOUT_ROUNDS } from "../data/KnockoutMatches";
 import KnockoutPredictCard from "../components/KnockoutPredictCard";
 import { saveKnockoutPredictions, getKnockoutResults } from "../utils/firebase";
 import FlagImg from "../components/FlagImg";
