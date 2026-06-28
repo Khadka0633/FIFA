@@ -1,4 +1,4 @@
-import { KNOCKOUT_POINT_MAP } from "../data/knockoutMatches";
+import { KNOCKOUT_POINT_MAP } from "../data/KnockoutMatches";
 
 export const calculateKnockoutScore = (predictions, results) => {
   let score = 0;
