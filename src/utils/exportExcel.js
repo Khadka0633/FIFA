@@ -1,6 +1,6 @@
 import * as XLSX from "xlsx";
 import { GROUP_STAGE_MATCHES, getTeam, GROUPS } from "../data/matches";
-import { KNOCKOUT_MATCHES, ROUND_LABELS } from "../data/knockoutMatches";
+import { KNOCKOUT_MATCHES, ROUND_LABELS } from "../data/KnockoutMatches";
 
 // ── Group stage export (existing) ─────────────────────────────────────────────
 export const exportPredictions = (players) => {
