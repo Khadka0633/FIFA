@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { GROUP_STAGE_MATCHES, GROUPS, getTeam } from "../data/matches";
-import { KNOCKOUT_MATCHES } from "../data/KnockoutMatches";
+import { KNOCKOUT_MATCHES } from "../data/knockoutMatches";
 import {
   setResult,
   getAllPlayers,
@@ -10,7 +10,7 @@ import {
   setKnockoutResult,
 } from "../utils/firebase";
 import FlagImg from "../components/FlagImg";
-import { exportPredictions } from "../utils/exportExcel";
+import { exportPredictions, exportKnockoutPredictions } from "../utils/exportExcel";
 
 const ADMIN_PASSWORD = "wc2026admin";
 
@@ -63,7 +63,7 @@ export default function AdminPage({ onExit, knockoutTeams = {} }) {
     };
   }, [authed]);
 
-  // ── Group stage result handler ────────────────────────────────────────────
+  // ── Handlers ─────────────────────────────────────────────────────────────
   const handleSetResult = async (matchId, value) => {
     setResults((prev) => ({ ...prev, [matchId]: value }));
     try {
@@ -75,14 +75,12 @@ export default function AdminPage({ onExit, knockoutTeams = {} }) {
     }
   };
 
-  // ── Knockout unlock toggle ────────────────────────────────────────────────
   const handleToggleKnockout = async () => {
     const newVal = !knockoutUnlocked;
     setKnockoutUnlocked(newVal);
     await fbSetKnockoutUnlocked(newVal);
   };
 
-  // ── Knockout result handler ───────────────────────────────────────────────
   const handleSetKnockoutResult = async (matchId, winner) => {
     setKnockoutResultsState((prev) => ({ ...prev, [matchId]: { winner } }));
     try {
@@ -96,6 +94,11 @@ export default function AdminPage({ onExit, knockoutTeams = {} }) {
       alert("Failed to save knockout result.");
     }
   };
+
+  // ── Derived counts ────────────────────────────────────────────────────────
+  const knockoutSubmittedCount = Object.values(players).filter(
+    (p) => p.knockoutLocked
+  ).length;
 
   // ── Login screen ──────────────────────────────────────────────────────────
   if (!authed) {
@@ -134,8 +137,6 @@ export default function AdminPage({ onExit, knockoutTeams = {} }) {
   // ── Derived data ──────────────────────────────────────────────────────────
   const groupMatches = GROUP_STAGE_MATCHES.filter((m) => m.group === activeGroup);
   const koRoundMatches = KNOCKOUT_MATCHES.filter((m) => m.round === activeKORound);
-
-  // Stats for header badges
   const groupResultsCount = Object.keys(results).length;
   const koResultsCount = Object.keys(knockoutResults).length;
 
@@ -149,14 +150,28 @@ export default function AdminPage({ onExit, knockoutTeams = {} }) {
         {/* Top bar */}
         <div className="max-w-3xl mx-auto px-4 py-4 flex items-center justify-between gap-3">
           <h1 className="text-white font-black text-xl">⚙️ Admin Panel</h1>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap justify-end">
+
+            {/* Group stage export */}
             <button
               onClick={() => exportPredictions(players)}
               disabled={Object.keys(players).length === 0}
-              className="bg-green-600 hover:bg-green-500 disabled:opacity-40 disabled:cursor-not-allowed text-white font-black text-xs px-3 py-2 rounded-lg transition-all"
+              className="bg-blue-600 hover:bg-blue-500 disabled:opacity-40 disabled:cursor-not-allowed text-white font-black text-xs px-3 py-2 rounded-lg transition-all"
+              title="Export all group stage predictions"
             >
-              📥 Export ({Object.keys(players).length} users)
+              📥 Group ({Object.keys(players).length})
             </button>
+
+            {/* Knockout export */}
+            <button
+              onClick={() => exportKnockoutPredictions(players, knockoutTeams)}
+              disabled={knockoutSubmittedCount === 0}
+              className="bg-green-600 hover:bg-green-500 disabled:opacity-40 disabled:cursor-not-allowed text-white font-black text-xs px-3 py-2 rounded-lg transition-all"
+              title="Export knockout stage predictions"
+            >
+              📥 Knockout ({knockoutSubmittedCount})
+            </button>
+
             <button
               onClick={onExit}
               className="text-[#4A6B8A] hover:text-white text-sm transition-colors"
@@ -188,7 +203,7 @@ export default function AdminPage({ onExit, knockoutTeams = {} }) {
           </button>
           <span className="text-[#4A6B8A] text-[10px]">
             {knockoutUnlocked
-              ? "Players can now submit knockout predictions"
+              ? `Players can submit knockout predictions · ${knockoutSubmittedCount} submitted`
               : "Players cannot see or submit knockout predictions"}
           </span>
         </div>
@@ -235,7 +250,7 @@ export default function AdminPage({ onExit, knockoutTeams = {} }) {
           </button>
         </div>
 
-        {/* Group tabs (only when group tab active) */}
+        {/* Group tabs */}
         {activeTab === "group" && (
           <div className="max-w-3xl mx-auto px-4 pb-3 flex gap-1.5 overflow-x-auto scrollbar-none">
             {GROUPS.map((g) => {
@@ -265,12 +280,14 @@ export default function AdminPage({ onExit, knockoutTeams = {} }) {
           </div>
         )}
 
-        {/* Knockout round tabs (only when knockout tab active) */}
+        {/* Knockout round tabs */}
         {activeTab === "knockout" && (
           <div className="max-w-3xl mx-auto px-4 pb-3 flex gap-1.5 overflow-x-auto scrollbar-none">
             {KNOCKOUT_ROUND_ORDER.map((r) => {
               const rMatches = KNOCKOUT_MATCHES.filter((m) => m.round === r);
-              const rDone = rMatches.filter((m) => knockoutResults[m.id]?.winner).length;
+              const rDone = rMatches.filter(
+                (m) => knockoutResults[m.id]?.winner
+              ).length;
               const rComplete = rDone === rMatches.length && rMatches.length > 0;
               return (
                 <button
@@ -315,17 +332,13 @@ export default function AdminPage({ onExit, knockoutTeams = {} }) {
                   { value: "DRAW", label: "Draw", iso: null },
                   { value: match.away, label: away.code, iso: away.iso },
                 ];
-
                 return (
                   <div
                     key={match.id}
                     className={`bg-[#002657] border rounded-xl px-4 py-3 transition-all ${
-                      currentResult
-                        ? "border-green-500/30"
-                        : "border-[#003F88]"
+                      currentResult ? "border-green-500/30" : "border-[#003F88]"
                     }`}
                   >
-                    {/* Match header */}
                     <div className="flex items-center justify-between mb-3">
                       <div className="flex items-center gap-2 flex-wrap">
                         <FlagImg iso={home.iso} size={20} className="rounded-sm" />
@@ -343,8 +356,6 @@ export default function AdminPage({ onExit, knockoutTeams = {} }) {
                         <span className="text-[#4A6B8A] text-[10px]">{match.date}</span>
                       </div>
                     </div>
-
-                    {/* Result buttons */}
                     <div className="flex gap-2">
                       {options.map((opt) => (
                         <button
@@ -391,11 +402,13 @@ export default function AdminPage({ onExit, knockoutTeams = {} }) {
               )}
             </div>
 
-            {/* Round progress summary */}
+            {/* Round progress summary cards */}
             <div className="grid grid-cols-3 gap-2 mb-5">
               {KNOCKOUT_ROUND_ORDER.map((r) => {
                 const rMatches = KNOCKOUT_MATCHES.filter((m) => m.round === r);
-                const rDone = rMatches.filter((m) => knockoutResults[m.id]?.winner).length;
+                const rDone = rMatches.filter(
+                  (m) => knockoutResults[m.id]?.winner
+                ).length;
                 return (
                   <button
                     key={r}
@@ -406,7 +419,9 @@ export default function AdminPage({ onExit, knockoutTeams = {} }) {
                         : "border-[#003F88] bg-[#002657] hover:border-[#7BA3D4]"
                     }`}
                   >
-                    <p className={`text-[10px] font-black ${activeKORound === r ? "text-[#FFD700]" : "text-[#7BA3D4]"}`}>
+                    <p className={`text-[10px] font-black ${
+                      activeKORound === r ? "text-[#FFD700]" : "text-[#7BA3D4]"
+                    }`}>
                       {ROUND_LABELS[r]}
                     </p>
                     <p className="text-[9px] text-[#4A6B8A] mt-0.5">
@@ -433,9 +448,7 @@ export default function AdminPage({ onExit, knockoutTeams = {} }) {
                   <div
                     key={match.id}
                     className={`bg-[#002657] border rounded-xl px-4 py-3 transition-all ${
-                      currentWinner
-                        ? "border-green-500/30"
-                        : "border-[#003F88]"
+                      currentWinner ? "border-green-500/30" : "border-[#003F88]"
                     }`}
                   >
                     {/* Match header */}
@@ -473,13 +486,15 @@ export default function AdminPage({ onExit, knockoutTeams = {} }) {
                       </div>
                     </div>
 
-                    {/* Winner buttons — only if both teams known */}
+                    {/* Winner buttons */}
                     {home && away ? (
                       <div className="flex gap-2">
                         {[home, away].map((team) => (
                           <button
                             key={team.code}
-                            onClick={() => handleSetKnockoutResult(match.id, team.code)}
+                            onClick={() =>
+                              handleSetKnockoutResult(match.id, team.code)
+                            }
                             className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-bold transition-all ${
                               currentWinner === team.code
                                 ? "bg-green-500/20 border border-green-500 text-green-400"
@@ -488,9 +503,10 @@ export default function AdminPage({ onExit, knockoutTeams = {} }) {
                           >
                             <FlagImg iso={team.iso} size={16} className="rounded-sm" />
                             {team.code}
-                            {knockoutSaved[match.id] && currentWinner === team.code && (
-                              <span className="ml-1">✓</span>
-                            )}
+                            {knockoutSaved[match.id] &&
+                              currentWinner === team.code && (
+                                <span className="ml-1">✓</span>
+                              )}
                           </button>
                         ))}
                       </div>
@@ -500,18 +516,32 @@ export default function AdminPage({ onExit, knockoutTeams = {} }) {
                           ⏳ Teams not yet determined
                         </p>
                         <p className="text-[#4A6B8A] text-[10px] mt-0.5">
-                          {!homeKnown && <span>Waiting for <span className="text-white font-bold">{homeSlot}</span> </span>}
+                          {!homeKnown && (
+                            <span>
+                              Waiting for{" "}
+                              <span className="text-white font-bold">{homeSlot}</span>{" "}
+                            </span>
+                          )}
                           {!homeKnown && !awayKnown && "& "}
-                          {!awayKnown && <span>Waiting for <span className="text-white font-bold">{awaySlot}</span></span>}
+                          {!awayKnown && (
+                            <span>
+                              Waiting for{" "}
+                              <span className="text-white font-bold">{awaySlot}</span>
+                            </span>
+                          )}
                         </p>
                       </div>
                     )}
 
-                    {/* Show current winner if set */}
+                    {/* Current winner display */}
                     {currentWinner && (
                       <div className="mt-2 flex items-center gap-2 px-1">
                         <span className="text-[#4A6B8A] text-[10px]">Winner:</span>
-                        <FlagImg iso={getTeam(currentWinner).iso} size={14} className="rounded-sm" />
+                        <FlagImg
+                          iso={getTeam(currentWinner).iso}
+                          size={14}
+                          className="rounded-sm"
+                        />
                         <span className="text-green-400 text-[10px] font-bold">
                           {getTeam(currentWinner).name}
                         </span>

@@ -1,14 +1,18 @@
 import { useState, useEffect } from "react";
-import { initFirebase, getPlayerData, cleanOldMessages } from "./utils/firebase";
+import {
+  initFirebase,
+  getPlayerData,
+  cleanOldMessages,
+  getKnockoutUnlocked,
+  getKnockoutTeams,
+  getResults,
+} from "./utils/firebase";
 import LoginPage from "./pages/LoginPage";
 import PredictPage from "./pages/PredictPage";
 import LeaderboardPage from "./pages/LeaderboardPage";
-import { syncResults, syncKnockoutResults } from "./utils/resultsSync";
 import AdminPage from "./pages/AdminPage";
 import KnockoutPredictPage from "./pages/KnockoutPredictPage";
-import { getKnockoutUnlocked, getKnockoutTeams } from "./utils/firebase";
-import { getKnockoutTeams as listenKnockoutTeams } from "./utils/qualifyTeams";
-import { getResults } from "./utils/firebase";
+import { syncResults, syncKnockoutResults } from "./utils/resultsSync";
 import { syncKnockoutTeams } from "./utils/qualifyTeams";
 
 initFirebase();
@@ -21,45 +25,42 @@ export default function App() {
   const [knockoutUnlocked, setKnockoutUnlocked] = useState(false);
   const [knockoutTeams, setKnockoutTeams] = useState({});
 
+  // ── Admin route ───────────────────────────────────────────────────────────
   useEffect(() => {
     if (window.location.hash === "#admin") setPage("admin");
   }, []);
 
+  // ── Sync results from API every 15 mins ───────────────────────────────────
   useEffect(() => {
     syncResults();
+    syncKnockoutResults();
     cleanOldMessages();
-    const interval = setInterval(syncResults, 15 * 60 * 1000);
+    const interval = setInterval(() => {
+      syncResults();
+      syncKnockoutResults();
+    }, 15 * 60 * 1000);
     return () => clearInterval(interval);
   }, []);
 
+  // ── Listen to knockout unlock flag + knockout teams from Firebase ──────────
   useEffect(() => {
     const u1 = getKnockoutUnlocked(setKnockoutUnlocked);
-    const u2 = listenKnockoutTeams(setKnockoutTeams);
+    const u2 = getKnockoutTeams(setKnockoutTeams);
     return () => {
       if (typeof u1 === "function") u1();
       if (typeof u2 === "function") u2();
     };
   }, []);
 
+  // ── Auto-sync knockoutTeams whenever group results change ─────────────────
   useEffect(() => {
-  const unsub = getResults((results) => {
-    syncKnockoutTeams(results);
-  });
-  return () => { if (typeof unsub === "function") unsub(); };
-}, []);
+    const unsub = getResults((results) => {
+      syncKnockoutTeams(results);
+    });
+    return () => { if (typeof unsub === "function") unsub(); };
+  }, []);
 
-
-  useEffect(() => {
-  syncResults();
-  syncKnockoutResults();
-  cleanOldMessages();
-  const interval = setInterval(() => {
-    syncResults();
-    syncKnockoutResults();
-  }, 15 * 60 * 1000);
-  return () => clearInterval(interval);
-}, []);
-
+  // ── Auth handlers ─────────────────────────────────────────────────────────
   const handleLogin = async (name, avatarFlag) => {
     setLoading(true);
     const playerObj = { name, avatarFlag };
@@ -68,8 +69,11 @@ export default function App() {
       const existing = await getPlayerData(name);
       if (existing?.locked) {
         setMyPredictions(existing.predictions);
-        // Merge knockout data into player object
-        setPlayer({ ...playerObj, knockoutLocked: existing.knockoutLocked, knockoutPredictions: existing.knockoutPredictions });
+        setPlayer({
+          ...playerObj,
+          knockoutLocked: existing.knockoutLocked,
+          knockoutPredictions: existing.knockoutPredictions,
+        });
         setPage("leaderboard");
       } else {
         setPage("predict");
@@ -81,7 +85,10 @@ export default function App() {
   };
 
   const handleViewLeaderboard = () => {
-    setPlayer({ name: "Guest", avatarFlag: { flag: "🏳️", name: "Guest", code: "GST", iso: "un" } });
+    setPlayer({
+      name: "Guest",
+      avatarFlag: { flag: "🏳️", name: "Guest", code: "GST", iso: "un" },
+    });
     setPage("leaderboard");
   };
 
@@ -91,10 +98,15 @@ export default function App() {
   };
 
   const handleKnockoutSubmitted = (preds) => {
-    setPlayer(prev => ({ ...prev, knockoutLocked: true, knockoutPredictions: preds }));
+    setPlayer((prev) => ({
+      ...prev,
+      knockoutLocked: true,
+      knockoutPredictions: preds,
+    }));
     setPage("leaderboard");
   };
 
+  // ── Loading screen ────────────────────────────────────────────────────────
   if (loading) {
     return (
       <div className="min-h-screen bg-[#001A3D] flex items-center justify-center">
@@ -106,27 +118,37 @@ export default function App() {
     );
   }
 
+  // ── Routes ────────────────────────────────────────────────────────────────
   if (page === "admin") return (
     <AdminPage
       onExit={() => setPage(player ? "leaderboard" : "login")}
       knockoutTeams={knockoutTeams}
     />
   );
+
   if (page === "login") return (
-    <LoginPage onLogin={handleLogin} onViewLeaderboard={handleViewLeaderboard} />
+    <LoginPage
+      onLogin={handleLogin}
+      onViewLeaderboard={handleViewLeaderboard}
+    />
   );
+
   if (page === "predict") return (
-    <PredictPage player={player} onSubmitted={handleSubmitted} />
+    <PredictPage
+      player={player}
+      onSubmitted={handleSubmitted}
+    />
   );
+
   if (page === "knockout") return (
     <KnockoutPredictPage
       player={player}
-      knockoutTeams={knockoutTeams}
       alreadyLocked={!!player?.knockoutLocked}
       existingPredictions={player?.knockoutPredictions || {}}
       onSubmitted={handleKnockoutSubmitted}
     />
   );
+
   if (page === "leaderboard") return (
     <LeaderboardPage
       player={player}
