@@ -17,18 +17,25 @@ import { syncKnockoutTeams } from "./utils/qualifyTeams";
 
 initFirebase();
 
+const STORAGE_KEY = "wc2026_player";
+
 export default function App() {
   const [page, setPage] = useState("login");
   const [player, setPlayer] = useState(null);
   const [myPredictions, setMyPredictions] = useState(null);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [knockoutUnlocked, setKnockoutUnlocked] = useState(false);
   const [knockoutTeams, setKnockoutTeams] = useState({});
 
+  // ── Admin route ───────────────────────────────────────────────────────────
   useEffect(() => {
-    if (window.location.hash === "#admin") setPage("admin");
+    if (window.location.hash === "#admin") {
+      setLoading(false);
+      setPage("admin");
+    }
   }, []);
 
+  // ── API sync every 15 mins ────────────────────────────────────────────────
   useEffect(() => {
     syncResults();
     syncKnockoutResults();
@@ -40,6 +47,7 @@ export default function App() {
     return () => clearInterval(interval);
   }, []);
 
+  // ── Firebase listeners ────────────────────────────────────────────────────
   useEffect(() => {
     const u1 = getKnockoutUnlocked(setKnockoutUnlocked);
     const u2 = getKnockoutTeams(setKnockoutTeams);
@@ -49,7 +57,7 @@ export default function App() {
     };
   }, []);
 
-  // Auto-sync knockoutTeams whenever group results change
+  // ── Auto-sync knockoutTeams from group results ────────────────────────────
   useEffect(() => {
     const unsub = getResults((results) => {
       syncKnockoutTeams(results);
@@ -57,7 +65,28 @@ export default function App() {
     return () => { if (typeof unsub === "function") unsub(); };
   }, []);
 
-  const handleLogin = async (name, avatarFlag) => {
+  // ── Auto-login from localStorage on first load ────────────────────────────
+  useEffect(() => {
+    if (window.location.hash === "#admin") return;
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (!saved) {
+      setLoading(false);
+      return;
+    }
+    try {
+      const { name, avatarFlag } = JSON.parse(saved);
+      if (name && avatarFlag) {
+        autoLogin(name, avatarFlag);
+      } else {
+        setLoading(false);
+      }
+    } catch {
+      setLoading(false);
+    }
+  }, []);
+
+  // ── Core login logic (shared by auto and manual login) ────────────────────
+  const autoLogin = async (name, avatarFlag) => {
     setLoading(true);
     const playerObj = { name, avatarFlag };
     setPlayer(playerObj);
@@ -71,19 +100,33 @@ export default function App() {
           knockoutPredictions: existing.knockoutPredictions,
         });
         setPage("leaderboard");
+      } else if (knockoutUnlocked) {
+        setPlayer({
+          ...playerObj,
+          knockoutLocked: existing?.knockoutLocked || false,
+          knockoutPredictions: existing?.knockoutPredictions || {},
+        });
+        setPage("knockout");
       } else {
         setPage("predict");
       }
-    } catch (e) {
-      setPage("predict");
+    } catch {
+      setPage(knockoutUnlocked ? "knockout" : "predict");
     }
     setLoading(false);
+  };
+
+  // ── Manual login — saves to localStorage then logs in ────────────────────
+  const handleLogin = async (name, avatarFlag) => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ name, avatarFlag }));
+    await autoLogin(name, avatarFlag);
   };
 
   const handleViewLeaderboard = () => {
     setPlayer({
       name: "Guest",
       avatarFlag: { flag: "🏳️", name: "Guest", code: "GST", iso: "un" },
+      isGuest: true,
     });
     setPage("leaderboard");
   };
@@ -102,6 +145,15 @@ export default function App() {
     setPage("leaderboard");
   };
 
+  // ── Logout — clears localStorage and goes to login ────────────────────────
+  const handleLogout = () => {
+    localStorage.removeItem(STORAGE_KEY);
+    setPlayer(null);
+    setMyPredictions(null);
+    setPage("login");
+  };
+
+  // ── Loading screen ────────────────────────────────────────────────────────
   if (loading) {
     return (
       <div className="min-h-screen bg-[#001A3D] flex items-center justify-center">
@@ -113,6 +165,7 @@ export default function App() {
     );
   }
 
+  // ── Routes ────────────────────────────────────────────────────────────────
   if (page === "admin") return (
     <AdminPage
       onExit={() => setPage(player ? "leaderboard" : "login")}
@@ -150,7 +203,7 @@ export default function App() {
       myPredictions={myPredictions}
       knockoutUnlocked={knockoutUnlocked}
       knockoutTeams={knockoutTeams}
-      onBack={() => setPage("login")}
+      onBack={handleLogout}
       onGoKnockout={() => setPage("knockout")}
     />
   );
