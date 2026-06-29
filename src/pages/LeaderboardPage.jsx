@@ -2,7 +2,7 @@ import { useEffect, useState, useRef } from "react";
 import { getAllPlayers, getResults, sendChatMessage, getChat, getKnockoutResults, getKnockoutUnlocked, getKnockoutTeams } from "../utils/firebase";
 import { buildLeaderboard } from "../utils/scoring";
 import { GROUP_STAGE_MATCHES, getTeam, GROUPS } from "../data/matches";
-import { KNOCKOUT_MATCHES } from "../data/knockoutMatches";
+import { KNOCKOUT_MATCHES } from "../data/KnockoutMatches";
 import FlagImg from "../components/FlagImg";
 import { buildKnockoutLeaderboard } from "../utils/knockoutScoring";
 import KnockoutBracket from "../components/KnockoutBracket";
