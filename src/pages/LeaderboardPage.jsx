@@ -499,15 +499,19 @@ function KnockoutPicksRows({ predictions, knockoutResults, knockoutTeams = {} })
               const awayTeam = /^[A-Z]{3}$/.test(awayCode) ? getTeam(awayCode) : null;
               return (
                 <div key={match.id} className="flex items-center text-xs py-1.5 border-b border-[#003F88]/50 last:border-0 gap-1.5">
-                  {homeTeam ? <FlagImg iso={homeTeam.iso} size={14} className="rounded-sm flex-shrink-0" /> : <span className="w-4 flex-shrink-0" />}
+                  {homeTeam
+                    ? <FlagImg iso={homeTeam.iso} size={20} className="rounded-sm flex-shrink-0" />  
+                    : <span className="w-5 flex-shrink-0" />}
                   <span className="text-[#4A6B8A] flex-shrink-0 text-[9px]">{homeTeam?.code || match.h}</span>
                   <span className="text-[#4A6B8A] flex-shrink-0 text-[9px]">v</span>
-                  {awayTeam ? <FlagImg iso={awayTeam.iso} size={14} className="rounded-sm flex-shrink-0" /> : <span className="w-4 flex-shrink-0" />}
+                  {awayTeam
+                    ? <FlagImg iso={awayTeam.iso} size={20} className="rounded-sm flex-shrink-0" />  
+                    : <span className="w-5 flex-shrink-0" />}
                   <span className="text-[#4A6B8A] flex-shrink-0 text-[9px]">{awayTeam?.code || match.a}</span>
                   <span className="flex-1" />
                   {predTeam?.iso ? (
                     <div className="flex items-center gap-1 flex-shrink-0">
-                      <FlagImg iso={predTeam.iso} size={16} className="rounded-sm" />
+                      <FlagImg iso={predTeam.iso} size={20} className="rounded-sm" />  {/* ← was 16 */}
                       <span className="text-[#7BA3D4] font-medium">{predTeam.code}</span>
                     </div>
                   ) : (
@@ -527,6 +531,7 @@ function KnockoutPicksRows({ predictions, knockoutResults, knockoutTeams = {} })
     </>
   );
 }
+
 
 // ── Fixtures Tab ──────────────────────────────────────────────────────────────
 function FixturesTab({ results }) {
