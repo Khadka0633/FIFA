@@ -9,6 +9,7 @@ import {
   getKnockoutResults,
   setKnockoutResult,
 } from "../utils/firebase";
+import { getDatabase, ref, update } from "firebase/database";
 import FlagImg from "../components/FlagImg";
 import { exportPredictions, exportKnockoutPredictions } from "../utils/exportExcel";
 
@@ -29,28 +30,23 @@ export default function AdminPage({ onExit, knockoutTeams = {} }) {
   const [authed, setAuthed] = useState(false);
   const [pw, setPw] = useState("");
 
-  // Group stage state
   const [results, setResults] = useState({});
   const [saved, setSaved] = useState({});
   const [activeGroup, setActiveGroup] = useState("A");
 
-  // Knockout state
   const [knockoutUnlocked, setKnockoutUnlocked] = useState(false);
   const [knockoutResults, setKnockoutResultsState] = useState({});
   const [knockoutSaved, setKnockoutSaved] = useState({});
   const [activeKORound, setActiveKORound] = useState("R32");
 
-  // Players & tab
   const [players, setPlayers] = useState({});
   const [activeTab, setActiveTab] = useState("group");
 
-  // ── Auth ──────────────────────────────────────────────────────────────────
   const handleLogin = () => {
     if (pw === ADMIN_PASSWORD) setAuthed(true);
     else alert("Wrong password");
   };
 
-  // ── Firebase listeners ────────────────────────────────────────────────────
   useEffect(() => {
     if (!authed) return;
     const u1 = getAllPlayers(setPlayers);
@@ -63,7 +59,6 @@ export default function AdminPage({ onExit, knockoutTeams = {} }) {
     };
   }, [authed]);
 
-  // ── Handlers ─────────────────────────────────────────────────────────────
   const handleSetResult = async (matchId, value) => {
     setResults((prev) => ({ ...prev, [matchId]: value }));
     try {
@@ -85,6 +80,28 @@ export default function AdminPage({ onExit, knockoutTeams = {} }) {
     setKnockoutResultsState((prev) => ({ ...prev, [matchId]: { winner } }));
     try {
       await setKnockoutResult(matchId, winner);
+
+      // ── Auto-advance winner into knockoutTeams ──────────────────────────
+      const db = getDatabase();
+      const teamUpdates = {};
+
+      // Winner slot: e.g. R32_1 → WR32_1, R16_1 → WR16_1, QF1 → WQF1
+      teamUpdates[`W${matchId}`] = winner;
+
+      // SF losers go to Bronze
+      if (matchId === "SF1" || matchId === "SF2") {
+        const match = KNOCKOUT_MATCHES.find((m) => m.id === matchId);
+        if (match) {
+          const homeCode = knockoutTeams[match.h] || match.h;
+          const awayCode = knockoutTeams[match.a] || match.a;
+          const loser = winner === homeCode ? awayCode : homeCode;
+          teamUpdates[`L${matchId}`] = loser;
+        }
+      }
+
+      await update(ref(db, "knockoutTeams"), teamUpdates);
+      // ───────────────────────────────────────────────────────────────────
+
       setKnockoutSaved((prev) => ({ ...prev, [matchId]: true }));
       setTimeout(
         () => setKnockoutSaved((prev) => ({ ...prev, [matchId]: false })),
@@ -95,12 +112,10 @@ export default function AdminPage({ onExit, knockoutTeams = {} }) {
     }
   };
 
-  // ── Derived counts ────────────────────────────────────────────────────────
   const knockoutSubmittedCount = Object.values(players).filter(
     (p) => p.knockoutLocked
   ).length;
 
-  // ── Login screen ──────────────────────────────────────────────────────────
   if (!authed) {
     return (
       <div className="min-h-screen bg-[#001A3D] flex items-center justify-center px-4">
@@ -134,44 +149,33 @@ export default function AdminPage({ onExit, knockoutTeams = {} }) {
     );
   }
 
-  // ── Derived data ──────────────────────────────────────────────────────────
   const groupMatches = GROUP_STAGE_MATCHES.filter((m) => m.group === activeGroup);
   const koRoundMatches = KNOCKOUT_MATCHES.filter((m) => m.round === activeKORound);
   const groupResultsCount = Object.keys(results).length;
   const koResultsCount = Object.keys(knockoutResults).length;
 
-  // ── Main render ───────────────────────────────────────────────────────────
   return (
     <div className="min-h-screen bg-[#001A3D]">
-
-      {/* ── Sticky header ── */}
       <div className="sticky top-0 z-20 bg-[#001A3D]/95 backdrop-blur border-b border-[#003F88]">
 
         {/* Top bar */}
         <div className="max-w-3xl mx-auto px-4 py-4 flex items-center justify-between gap-3">
           <h1 className="text-white font-black text-xl">⚙️ Admin Panel</h1>
           <div className="flex items-center gap-2 flex-wrap justify-end">
-
-            {/* Group stage export */}
             <button
               onClick={() => exportPredictions(players)}
               disabled={Object.keys(players).length === 0}
               className="bg-blue-600 hover:bg-blue-500 disabled:opacity-40 disabled:cursor-not-allowed text-white font-black text-xs px-3 py-2 rounded-lg transition-all"
-              title="Export all group stage predictions"
             >
               📥 Group ({Object.keys(players).length})
             </button>
-
-            {/* Knockout export */}
             <button
               onClick={() => exportKnockoutPredictions(players, knockoutTeams)}
               disabled={knockoutSubmittedCount === 0}
               className="bg-green-600 hover:bg-green-500 disabled:opacity-40 disabled:cursor-not-allowed text-white font-black text-xs px-3 py-2 rounded-lg transition-all"
-              title="Export knockout stage predictions"
             >
               📥 Knockout ({knockoutSubmittedCount})
             </button>
-
             <button
               onClick={onExit}
               className="text-[#4A6B8A] hover:text-white text-sm transition-colors"
@@ -195,11 +199,7 @@ export default function AdminPage({ onExit, knockoutTeams = {} }) {
             }`}
           >
             <span>{knockoutUnlocked ? "🔓" : "🔒"}</span>
-            <span>
-              {knockoutUnlocked
-                ? "UNLOCKED — Click to lock"
-                : "LOCKED — Click to unlock"}
-            </span>
+            <span>{knockoutUnlocked ? "UNLOCKED — Click to lock" : "LOCKED — Click to unlock"}</span>
           </button>
           <span className="text-[#4A6B8A] text-[10px]">
             {knockoutUnlocked
@@ -221,9 +221,7 @@ export default function AdminPage({ onExit, knockoutTeams = {} }) {
             ⚽ Group Stage
             {groupResultsCount > 0 && (
               <span className={`text-[9px] px-1.5 py-0.5 rounded font-black ${
-                activeTab === "group"
-                  ? "bg-[#001A3D]/20 text-[#001A3D]"
-                  : "bg-green-500/20 text-green-400"
+                activeTab === "group" ? "bg-[#001A3D]/20 text-[#001A3D]" : "bg-green-500/20 text-green-400"
               }`}>
                 {groupResultsCount}/72
               </span>
@@ -240,9 +238,7 @@ export default function AdminPage({ onExit, knockoutTeams = {} }) {
             🏆 Knockout
             {koResultsCount > 0 && (
               <span className={`text-[9px] px-1.5 py-0.5 rounded font-black ${
-                activeTab === "knockout"
-                  ? "bg-[#001A3D]/20 text-[#001A3D]"
-                  : "bg-green-500/20 text-green-400"
+                activeTab === "knockout" ? "bg-[#001A3D]/20 text-[#001A3D]" : "bg-green-500/20 text-green-400"
               }`}>
                 {koResultsCount}/31
               </span>
@@ -268,12 +264,8 @@ export default function AdminPage({ onExit, knockoutTeams = {} }) {
                   }`}
                 >
                   Group {g}
-                  {gComplete && (
-                    <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-green-400 rounded-full" />
-                  )}
-                  {!gComplete && gDone > 0 && (
-                    <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-yellow-400 rounded-full" />
-                  )}
+                  {gComplete && <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-green-400 rounded-full" />}
+                  {!gComplete && gDone > 0 && <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-yellow-400 rounded-full" />}
                 </button>
               );
             })}
@@ -285,9 +277,7 @@ export default function AdminPage({ onExit, knockoutTeams = {} }) {
           <div className="max-w-3xl mx-auto px-4 pb-3 flex gap-1.5 overflow-x-auto scrollbar-none">
             {KNOCKOUT_ROUND_ORDER.map((r) => {
               const rMatches = KNOCKOUT_MATCHES.filter((m) => m.round === r);
-              const rDone = rMatches.filter(
-                (m) => knockoutResults[m.id]?.winner
-              ).length;
+              const rDone = rMatches.filter((m) => knockoutResults[m.id]?.winner).length;
               const rComplete = rDone === rMatches.length && rMatches.length > 0;
               return (
                 <button
@@ -300,12 +290,8 @@ export default function AdminPage({ onExit, knockoutTeams = {} }) {
                   }`}
                 >
                   {ROUND_LABELS[r]}
-                  {rComplete && (
-                    <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-green-400 rounded-full" />
-                  )}
-                  {!rComplete && rDone > 0 && (
-                    <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-yellow-400 rounded-full" />
-                  )}
+                  {rComplete && <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-green-400 rounded-full" />}
+                  {!rComplete && rDone > 0 && <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-yellow-400 rounded-full" />}
                 </button>
               );
             })}
@@ -402,13 +388,11 @@ export default function AdminPage({ onExit, knockoutTeams = {} }) {
               )}
             </div>
 
-            {/* Round progress summary cards */}
+            {/* Round progress summary */}
             <div className="grid grid-cols-3 gap-2 mb-5">
               {KNOCKOUT_ROUND_ORDER.map((r) => {
                 const rMatches = KNOCKOUT_MATCHES.filter((m) => m.round === r);
-                const rDone = rMatches.filter(
-                  (m) => knockoutResults[m.id]?.winner
-                ).length;
+                const rDone = rMatches.filter((m) => knockoutResults[m.id]?.winner).length;
                 return (
                   <button
                     key={r}
@@ -419,9 +403,7 @@ export default function AdminPage({ onExit, knockoutTeams = {} }) {
                         : "border-[#003F88] bg-[#002657] hover:border-[#7BA3D4]"
                     }`}
                   >
-                    <p className={`text-[10px] font-black ${
-                      activeKORound === r ? "text-[#FFD700]" : "text-[#7BA3D4]"
-                    }`}>
+                    <p className={`text-[10px] font-black ${activeKORound === r ? "text-[#FFD700]" : "text-[#7BA3D4]"}`}>
                       {ROUND_LABELS[r]}
                     </p>
                     <p className="text-[9px] text-[#4A6B8A] mt-0.5">
@@ -434,10 +416,13 @@ export default function AdminPage({ onExit, knockoutTeams = {} }) {
 
             <div className="space-y-3">
               {koRoundMatches.map((match) => {
-                const homeSlot = match.h;
-                const awaySlot = match.a;
-                const homeCode = knockoutTeams[homeSlot] || homeSlot;
-                const awayCode = knockoutTeams[awaySlot] || awaySlot;
+                // Resolve slot → team code via knockoutTeams
+                const homeCode = /^[A-Z]{3}$/.test(match.h)
+                  ? match.h
+                  : knockoutTeams[match.h] || match.h;
+                const awayCode = /^[A-Z]{3}$/.test(match.a)
+                  ? match.a
+                  : knockoutTeams[match.a] || match.a;
                 const homeKnown = /^[A-Z]{3}$/.test(homeCode);
                 const awayKnown = /^[A-Z]{3}$/.test(awayCode);
                 const home = homeKnown ? getTeam(homeCode) : null;
@@ -461,7 +446,7 @@ export default function AdminPage({ onExit, knockoutTeams = {} }) {
                           </>
                         ) : (
                           <span className="text-[#4A6B8A] text-sm font-bold italic">
-                            {homeSlot}
+                            {match.h}
                           </span>
                         )}
                         <span className="text-[#4A6B8A] text-xs font-black">vs</span>
@@ -472,7 +457,7 @@ export default function AdminPage({ onExit, knockoutTeams = {} }) {
                           </>
                         ) : (
                           <span className="text-[#4A6B8A] text-sm font-bold italic">
-                            {awaySlot}
+                            {match.a}
                           </span>
                         )}
                       </div>
@@ -492,9 +477,7 @@ export default function AdminPage({ onExit, knockoutTeams = {} }) {
                         {[home, away].map((team) => (
                           <button
                             key={team.code}
-                            onClick={() =>
-                              handleSetKnockoutResult(match.id, team.code)
-                            }
+                            onClick={() => handleSetKnockoutResult(match.id, team.code)}
                             className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-bold transition-all ${
                               currentWinner === team.code
                                 ? "bg-green-500/20 border border-green-500 text-green-400"
@@ -503,45 +486,32 @@ export default function AdminPage({ onExit, knockoutTeams = {} }) {
                           >
                             <FlagImg iso={team.iso} size={16} className="rounded-sm" />
                             {team.code}
-                            {knockoutSaved[match.id] &&
-                              currentWinner === team.code && (
-                                <span className="ml-1">✓</span>
-                              )}
+                            {knockoutSaved[match.id] && currentWinner === team.code && (
+                              <span className="ml-1">✓</span>
+                            )}
                           </button>
                         ))}
                       </div>
                     ) : (
                       <div className="bg-[#001535] border border-[#0F3060] border-dashed rounded-lg px-3 py-2.5 text-center">
-                        <p className="text-[#4A6B8A] text-xs">
-                          ⏳ Teams not yet determined
-                        </p>
+                        <p className="text-[#4A6B8A] text-xs">⏳ Teams not yet determined</p>
                         <p className="text-[#4A6B8A] text-[10px] mt-0.5">
                           {!homeKnown && (
-                            <span>
-                              Waiting for{" "}
-                              <span className="text-white font-bold">{homeSlot}</span>{" "}
-                            </span>
+                            <span>Waiting for <span className="text-white font-bold">{match.h}</span> </span>
                           )}
                           {!homeKnown && !awayKnown && "& "}
                           {!awayKnown && (
-                            <span>
-                              Waiting for{" "}
-                              <span className="text-white font-bold">{awaySlot}</span>
-                            </span>
+                            <span>Waiting for <span className="text-white font-bold">{match.a}</span></span>
                           )}
                         </p>
                       </div>
                     )}
 
-                    {/* Current winner display */}
+                    {/* Current winner */}
                     {currentWinner && (
                       <div className="mt-2 flex items-center gap-2 px-1">
                         <span className="text-[#4A6B8A] text-[10px]">Winner:</span>
-                        <FlagImg
-                          iso={getTeam(currentWinner).iso}
-                          size={14}
-                          className="rounded-sm"
-                        />
+                        <FlagImg iso={getTeam(currentWinner).iso} size={20} className="rounded-sm" />
                         <span className="text-green-400 text-[10px] font-bold">
                           {getTeam(currentWinner).name}
                         </span>
