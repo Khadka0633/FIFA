@@ -85,12 +85,25 @@ export const setResult = async (matchId, winner, homeScore, awayScore) => {
 
 // ── Knockout predictions ──────────────────────────────────────────────────────
 
+// Save all knockout predictions at once (legacy — kept for compatibility)
 export const saveKnockoutPredictions = async (playerName, predictions, avatarFlag) => {
   if (!db) return demoSaveKnockout(playerName, predictions);
   await update(ref(db, `players/${sanitize(playerName)}`), {
     knockoutPredictions: predictions,
-    knockoutLocked: true,
     knockoutSubmittedAt: Date.now(),
+  });
+};
+
+// Save predictions for a specific round only — merges with existing
+export const saveKnockoutRoundPredictions = async (playerName, round, roundPredictions, avatarFlag) => {
+  if (!db) return;
+  const snap = await get(ref(db, `players/${sanitize(playerName)}/knockoutPredictions`));
+  const existing = snap.exists() ? snap.val() : {};
+  const merged = { ...existing, ...roundPredictions };
+  await update(ref(db, `players/${sanitize(playerName)}`), {
+    knockoutPredictions: merged,
+    knockoutSubmittedAt: Date.now(),
+    // Don't set knockoutRoundLocked_ here — individual match saves don't lock whole rounds
   });
 };
 
@@ -123,6 +136,20 @@ export const getKnockoutUnlocked = (callback) => {
 export const setKnockoutUnlocked = async (value) => {
   if (!db) return;
   await update(ref(db, "settings"), { knockoutUnlocked: value });
+};
+
+// ── Knockout round locks ──────────────────────────────────────────────────────
+
+export const getKnockoutRoundLocks = (callback) => {
+  if (!db) { callback({}); return () => {}; }
+  return onValue(ref(db, "settings/knockoutRoundLocks"), (snap) => {
+    callback(snap.exists() ? snap.val() : {});
+  });
+};
+
+export const setKnockoutRoundLock = async (round, locked) => {
+  if (!db) return;
+  await update(ref(db, "settings/knockoutRoundLocks"), { [round]: locked });
 };
 
 // ── Knockout teams (resolved group standings → R32 slots) ────────────────────
@@ -216,7 +243,6 @@ const demoSaveKnockout = (playerName, predictions) => {
   const key = sanitize(playerName);
   if (all[key]) {
     all[key].knockoutPredictions = predictions;
-    all[key].knockoutLocked = true;
     all[key].knockoutSubmittedAt = Date.now();
   }
   localStorage.setItem("wc_players", JSON.stringify(all));
@@ -225,9 +251,7 @@ const demoSaveKnockout = (playerName, predictions) => {
 const demoKnockoutResults = (callback) => {
   callback(JSON.parse(localStorage.getItem("wc_knockout_results") || "{}"));
   const interval = setInterval(() => {
-    callback(
-      JSON.parse(localStorage.getItem("wc_knockout_results") || "{}")
-    );
+    callback(JSON.parse(localStorage.getItem("wc_knockout_results") || "{}"));
   }, 5000);
   return () => clearInterval(interval);
 };

@@ -5,6 +5,7 @@ import {
   cleanOldMessages,
   getKnockoutUnlocked,
   getKnockoutTeams,
+  getKnockoutRoundLocks,
   getResults,
 } from "./utils/firebase";
 import LoginPage from "./pages/LoginPage";
@@ -26,6 +27,7 @@ export default function App() {
   const [loading, setLoading] = useState(true);
   const [knockoutUnlocked, setKnockoutUnlocked] = useState(false);
   const [knockoutTeams, setKnockoutTeams] = useState({});
+  const [roundLocks, setRoundLocks] = useState({});
 
   // ── Admin route ───────────────────────────────────────────────────────────
   useEffect(() => {
@@ -51,9 +53,11 @@ export default function App() {
   useEffect(() => {
     const u1 = getKnockoutUnlocked(setKnockoutUnlocked);
     const u2 = getKnockoutTeams(setKnockoutTeams);
+    const u3 = getKnockoutRoundLocks(setRoundLocks);
     return () => {
       if (typeof u1 === "function") u1();
       if (typeof u2 === "function") u2();
+      if (typeof u3 === "function") u3();
     };
   }, []);
 
@@ -85,38 +89,37 @@ export default function App() {
     }
   }, []);
 
-  // ── Core login logic (shared by auto and manual login) ────────────────────
+  // ── Core login logic ──────────────────────────────────────────────────────
   const autoLogin = async (name, avatarFlag) => {
-    setLoading(true);
-    const playerObj = { name, avatarFlag };
-    setPlayer(playerObj);
-    try {
-      const existing = await getPlayerData(name);
-      if (existing?.locked) {
-        setMyPredictions(existing.predictions);
-        setPlayer({
-          ...playerObj,
-          knockoutLocked: existing.knockoutLocked,
-          knockoutPredictions: existing.knockoutPredictions,
-        });
-        setPage("leaderboard");
-      } else if (knockoutUnlocked) {
-        setPlayer({
-          ...playerObj,
-          knockoutLocked: existing?.knockoutLocked || false,
-          knockoutPredictions: existing?.knockoutPredictions || {},
-        });
-        setPage("knockout");
-      } else {
-        setPage("predict");
-      }
-    } catch {
-      setPage(knockoutUnlocked ? "knockout" : "predict");
-    }
-    setLoading(false);
-  };
+  setLoading(true);
+  const playerObj = { name, avatarFlag };
+  setPlayer(playerObj);
+  try {
+    const existing = await getPlayerData(name);
 
-  // ── Manual login — saves to localStorage then logs in ────────────────────
+    if (existing?.locked) {
+      setMyPredictions(existing.predictions);
+      setPlayer({
+        ...playerObj,
+        knockoutPredictions: existing.knockoutPredictions || {},
+        ...Object.fromEntries(
+          ["R32", "R16", "QF", "SF", "Bronze", "Final"].map(r => [
+            `knockoutRoundLocked_${r}`,
+            existing[`knockoutRoundLocked_${r}`] || false,
+          ])
+        ),
+      });
+      setPage("leaderboard"); // ← always go to leaderboard
+    } else {
+      setPage("predict"); // ← group stage predictions not done yet
+    }
+  } catch {
+    setPage("leaderboard");
+  }
+  setLoading(false);
+};
+
+  // ── Manual login ──────────────────────────────────────────────────────────
   const handleLogin = async (name, avatarFlag) => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify({ name, avatarFlag }));
     await autoLogin(name, avatarFlag);
@@ -136,16 +139,17 @@ export default function App() {
     setPage("leaderboard");
   };
 
-  const handleKnockoutSubmitted = (preds) => {
+  // ── Knockout submitted — merge predictions + round lock flags ─────────────
+  const handleKnockoutSubmitted = (preds, round) => {
     setPlayer((prev) => ({
       ...prev,
-      knockoutLocked: true,
-      knockoutPredictions: preds,
+      knockoutPredictions: { ...(prev?.knockoutPredictions || {}), ...preds },
+      ...(round ? { [`knockoutRoundLocked_${round}`]: true } : {}),
     }));
-    setPage("leaderboard");
+    
   };
 
-  // ── Logout — clears localStorage and goes to login ────────────────────────
+  // ── Logout ────────────────────────────────────────────────────────────────
   const handleLogout = () => {
     localStorage.removeItem(STORAGE_KEY);
     setPlayer(null);
@@ -191,9 +195,10 @@ export default function App() {
     <KnockoutPredictPage
       player={player}
       knockoutTeams={knockoutTeams}
-      alreadyLocked={!!player?.knockoutLocked}
+      roundLocks={roundLocks}
       existingPredictions={player?.knockoutPredictions || {}}
       onSubmitted={handleKnockoutSubmitted}
+      onBack={() => setPage("leaderboard")} 
     />
   );
 
@@ -203,6 +208,7 @@ export default function App() {
       myPredictions={myPredictions}
       knockoutUnlocked={knockoutUnlocked}
       knockoutTeams={knockoutTeams}
+      roundLocks={roundLocks}
       onBack={handleLogout}
       onGoKnockout={() => setPage("knockout")}
     />

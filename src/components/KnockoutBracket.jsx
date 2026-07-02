@@ -31,11 +31,11 @@ const R16L = [
   {id:"R16_1", h:"PAR", a:"FRA", date:"Jul 5"},
   {id:"R16_2", h:"CAN", a:"MAR", date:"Jul 4"},
   {id:"R16_3", h:"", a:"", date:"Jul 6"},
-  {id:"R16_4", h:"", a:"", date:"Jul 7"},
+  {id:"R16_4", h:"USA", a:"BEL", date:"Jul 7"},
 ];
 const R16R = [
   {id:"R16_5", h:"BRA", a:"NOR", date:"Jul 5"},
-  {id:"R16_6", h:"", a:"", date:"Jul 6"},
+  {id:"R16_6", h:"MEX", a:"ENG", date:"Jul 6"},
   {id:"R16_7", h:"", a:"", date:"Jul 7"},
   {id:"R16_8", h:"", a:"", date:"Jul 7"},
 ];

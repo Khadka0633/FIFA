@@ -7,6 +7,7 @@ import FlagImg from "../components/FlagImg";
 import { buildKnockoutLeaderboard } from "../utils/KnockoutScoring";
 import KnockoutBracket from "../components/KnockoutBracket";
 
+
 const MEDAL = ["🥇", "🥈", "🥉"];
 
 const ROUND_LABELS = {
@@ -53,10 +54,7 @@ export default function LeaderboardPage({ player, myPredictions, onBack, onGoKno
   const isGuest = player?.name === "Guest";
 
   const handleTabClick = (t) => {
-    if (t === "knockout" && knockoutUnlocked && !player?.knockoutLocked && !isGuest) {
-      onGoKnockout?.();
-      return;
-    }
+   
     setTab(t);
   };
 
@@ -101,7 +99,7 @@ export default function LeaderboardPage({ player, myPredictions, onBack, onGoKno
                 : t === "fixtures" ? "📅 Fixtures"
                 : t === "bracket" ? "🗂️ Bracket"
                 : knockoutUnlocked ? "🏆 Knockout" : "🔜 Knockout"}
-              {t === "knockout" && knockoutUnlocked && !player?.knockoutLocked && !isGuest && (
+              {t === "knockout" && knockoutUnlocked  && !isGuest && (
                 <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-green-400 rounded-full animate-pulse" />
               )}
             </button>
@@ -631,55 +629,146 @@ function KnockoutLeaderboardTab({ leaderboard, player, myEntry, myRank, knockout
     );
   }
 
+  // ── Top 3 podium data ─────────────────────────────────────────────────────
+  const top3 = leaderboard.slice(0, 3);
+  const podiumOrder = [top3[1], top3[0], top3[2]].filter(Boolean); // 2nd, 1st, 3rd
+
   return (
     <>
-      {!player?.knockoutLocked && onGoKnockout && (
-        <div className="mb-5 bg-[#FFD700]/10 border border-[#FFD700]/30 rounded-2xl px-5 py-4">
-          <p className="text-[#FFD700] font-black text-base mb-1">🏆 Knockout predictions are open!</p>
-          <p className="text-[#7BA3D4] text-xs mb-3">Submit your picks for the Round of 32 through the Final.</p>
-          <button
-            onClick={onGoKnockout}
-            className="w-full bg-[#FFD700] hover:bg-[#FFC200] text-[#001A3D] font-black py-3 rounded-xl transition-all hover:scale-[1.02] active:scale-[0.98]"
-          >
-            Submit My Knockout Predictions →
-          </button>
+      {/* ── CTA Banner ── */}
+      {!player?.isGuest && onGoKnockout && (
+        <div className="mb-5 relative overflow-hidden bg-gradient-to-r from-[#FFD700]/20 via-[#FFD700]/10 to-[#FFD700]/20 border border-[#FFD700]/40 rounded-2xl px-5 py-4">
+          <div className="absolute inset-0 opacity-5">
+            <div className="absolute top-0 left-0 w-32 h-32 bg-[#FFD700] rounded-full blur-3xl" />
+            <div className="absolute bottom-0 right-0 w-32 h-32 bg-[#FFD700] rounded-full blur-3xl" />
+          </div>
+          <div className="relative flex items-center gap-4">
+            <span className="text-4xl flex-shrink-0">🏆</span>
+            <div className="flex-1 min-w-0">
+              <p className="text-[#FFD700] font-black text-sm mb-0.5">Knockout predictions are open!</p>
+              <p className="text-[#7BA3D4] text-xs">Pick winners for each match as teams are confirmed.</p>
+            </div>
+            <button
+              onClick={onGoKnockout}
+              className="flex-shrink-0 bg-[#FFD700] hover:bg-[#FFC200] text-[#001A3D] font-black text-xs py-2 px-4 rounded-xl transition-all hover:scale-105 active:scale-95 whitespace-nowrap"
+            >
+              Pick Now →
+            </button>
+          </div>
         </div>
       )}
 
-      {player?.knockoutLocked && (
-        <div className="mb-5 bg-green-500/10 border border-green-500/30 rounded-xl px-4 py-3 flex items-center gap-2">
-          <span className="text-green-400 text-lg">🔒</span>
-          <p className="text-green-400 text-sm font-bold">Your knockout predictions are locked in. Good luck!</p>
-        </div>
-      )}
-
+      {/* ── My rank card ── */}
       {myEntry && (
-        <div className="bg-[#FFD700]/10 border border-[#FFD700]/30 rounded-2xl px-5 py-4 mb-5 flex items-center gap-4">
-          <span className="text-4xl">{myRank <= 3 ? ["🥇", "🥈", "🥉"][myRank - 1] : `#${myRank}`}</span>
-          <div className="flex-1">
-            <p className="text-[#FFD700] font-black text-lg leading-tight">{player?.name}</p>
-            <p className="text-[#7BA3D4] text-xs">Knockout rank</p>
-          </div>
-          <div className="text-right">
-            <p className="text-white font-black text-2xl">{myEntry.score}</p>
-            <p className="text-[#4A6B8A] text-[10px] uppercase">{myEntry.correct}/{myEntry.total} correct</p>
+        <div className="mb-5 relative overflow-hidden rounded-2xl border border-[#FFD700]/30 bg-gradient-to-br from-[#FFD700]/10 to-transparent px-5 py-4">
+          <div className="flex items-center gap-4">
+            <div className="relative flex-shrink-0">
+              <div className="w-14 h-14 rounded-full bg-[#FFD700]/20 border-2 border-[#FFD700]/50 flex items-center justify-center">
+                <span className="text-2xl">{myRank <= 3 ? ["🥇","🥈","🥉"][myRank-1] : `#${myRank}`}</span>
+              </div>
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 mb-0.5">
+                <FlagImg iso={player?.avatarFlag?.iso} size={20} className="rounded-sm flex-shrink-0" />
+                <p className="text-[#FFD700] font-black text-base truncate">{player?.name}</p>
+              </div>
+              <p className="text-[#7BA3D4] text-xs">Knockout rank · {myEntry.correct}/{myEntry.total} correct</p>
+            </div>
+            <div className="text-right flex-shrink-0">
+              <p className="text-white font-black text-3xl leading-none">{myEntry.score}</p>
+              <p className="text-[#FFD700] text-[10px] font-bold uppercase tracking-wider">pts</p>
+            </div>
           </div>
         </div>
       )}
 
+      {/* ── Progress bar ── */}
       {resultsCount > 0 && (
-        <div className="mb-4 bg-[#002657] border border-[#003F88] rounded-xl px-4 py-3">
-          <div className="flex justify-between text-xs mb-1.5">
-            <span className="text-[#7BA3D4]">Knockout progress</span>
+        <div className="mb-5 bg-[#002657] border border-[#003F88] rounded-xl px-4 py-3">
+          <div className="flex justify-between text-xs mb-2">
+            <span className="text-[#7BA3D4] font-medium">Knockout progress</span>
             <span className="text-[#FFD700] font-bold">{resultsCount}/31 results in</span>
           </div>
-          <div className="h-1.5 bg-[#001A3D] rounded-full overflow-hidden">
-            <div className="h-full bg-[#FFD700] rounded-full transition-all duration-500"
-              style={{ width: `${Math.min(100, (resultsCount / 31) * 100)}%` }} />
+          <div className="h-2 bg-[#001A3D] rounded-full overflow-hidden">
+            <div
+              className="h-full rounded-full transition-all duration-700"
+              style={{
+                width: `${Math.min(100, (resultsCount / 31) * 100)}%`,
+                background: 'linear-gradient(90deg, #FFD700, #FFC200)',
+                boxShadow: '0 0 8px rgba(255,215,0,0.5)',
+              }}
+            />
+          </div>
+          {/* Round breakdown */}
+          <div className="flex gap-2 mt-2.5 flex-wrap">
+            {["R32","R16","QF","SF","Bronze","Final"].map(round => {
+              const total = { R32:16, R16:8, QF:4, SF:2, Bronze:1, Final:1 }[round];
+              const done = Object.entries(knockoutResults).filter(([id]) => {
+                const m = KNOCKOUT_MATCHES.find(x => x.id === id);
+                return m?.round === round;
+              }).length;
+              return (
+                <div key={round} className="flex items-center gap-1">
+                  <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded ${
+                    done === total ? "bg-green-500/20 text-green-400" : done > 0 ? "bg-yellow-500/20 text-yellow-400" : "bg-[#001A3D] text-[#4A6B8A]"
+                  }`}>
+                    {round} {done}/{total}
+                  </span>
+                </div>
+              );
+            })}
           </div>
         </div>
       )}
 
+      {/* ── Podium (top 3) ── */}
+      {leaderboard.length >= 2 && (
+  <div className="mb-5">
+    <p className="text-[#4A6B8A] text-[10px] font-medium uppercase tracking-widest mb-4 text-center">🏆 Top Players</p>
+    <div className="flex items-end justify-center gap-3">
+      {podiumOrder.map((p, podiumIdx) => {
+        const actualRank = leaderboard.indexOf(p) + 1;
+        const isFirst = actualRank === 1;
+        const isMe = p.name === player?.name;
+        const medals = ["🥇","🥈","🥉"];
+        const heights = ["h-20", "h-28", "h-14"][podiumIdx];
+        const colors = [
+          "from-[#C0C0C0]/30 border-[#C0C0C0]/40 text-[#C0C0C0]",
+          "from-[#FFD700]/30 border-[#FFD700]/40 text-[#FFD700]",
+          "from-[#CD7F32]/30 border-[#CD7F32]/40 text-[#CD7F32]",
+        ][podiumIdx];
+
+        return (
+          <div key={p.name} className="flex flex-col items-center flex-1 max-w-[130px]">
+            {/* Player info */}
+            <div className={`flex flex-col items-center mb-2 ${isFirst ? "scale-105" : ""}`}>
+              <span className="text-xl mb-1">{medals[actualRank - 1]}</span>
+              <div className={`w-12 h-12 rounded-full border-2 flex items-center justify-center overflow-hidden ${
+                isMe ? "border-[#FFD700]" : "border-[#003F88]"
+              }`}>
+                <FlagImg iso={p.avatarFlag?.iso} size={48} className="rounded-full" />
+              </div>
+              {/* Bigger, full name */}
+              <p className={`text-[15px] font-medium mt-1.5 text-center w-full px-1 leading-tight ${isMe ? "text-[#FFD700]" : "text-white"}`}>
+                {p.name}
+              </p>
+              {/* Bigger score */}
+              <p className={`text-sm font-medium mt-0.5 ${isFirst ? "text-[#FFD700]" : "text-[#7BA3D4]"}`}>
+                {p.score} <span className="text-[10px] font-normal">pts</span>
+              </p>
+              <p className="text-[#4A6B8A] text-[9px]">{p.correct}/{p.total} ✓</p>
+            </div>
+            {/* Podium block */}
+            <div className={`w-full ${heights} rounded-t-lg bg-gradient-to-b ${colors} border border-t flex items-center justify-center`}>
+              <span className="text-xs font-black opacity-60">#{actualRank}</span>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  </div>
+)}
+      {/* ── Full leaderboard ── */}
       {leaderboard.length === 0 ? (
         <div className="text-center py-16">
           <p className="text-5xl mb-3">🏆</p>
@@ -687,42 +776,70 @@ function KnockoutLeaderboardTab({ leaderboard, player, myEntry, myRank, knockout
           <p className="text-[#4A6B8A] text-sm mt-1">Be the first to lock in your picks!</p>
         </div>
       ) : (
-        <div className="space-y-2">
-          {leaderboard.map((p, i) => (
-            <div key={p.name}>
-              <button
-                onClick={() => setViewPlayer(viewPlayer?.name === p.name ? null : p)}
-                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl border transition-all text-left ${
-                  p.name === player?.name ? "border-[#FFD700]/40 bg-[#FFD700]/5" : "border-[#003F88] bg-[#002657] hover:border-[#7BA3D4]"
-                }`}
-              >
-                <span className="text-xl w-7 text-center flex-shrink-0">
-                  {i < 3 ? ["🥇", "🥈", "🥉"][i] : <span className="text-[#4A6B8A] text-sm font-bold">#{i + 1}</span>}
-                </span>
-                <FlagImg iso={p.avatarFlag?.iso} size={24} className="rounded-sm flex-shrink-0" />
-                <span className="text-white font-bold flex-1 truncate">{p.name}</span>
-                <div className="text-right flex-shrink-0">
-                  <p className="text-[#FFD700] font-black text-lg leading-tight">{p.score} pts</p>
-                  <p className="text-[#4A6B8A] text-[9px]">{p.correct}/{p.total} correct</p>
+        <>
+          <p className="text-[#4A6B8A] text-[10px] font-black uppercase tracking-widest mb-3">All Players</p>
+          <div className="space-y-2">
+            {leaderboard.map((p, i) => {
+              const isMe = p.name === player?.name;
+              const isTop3 = i < 3;
+              return (
+                <div key={p.name}>
+                  <button
+                    onClick={() => setViewPlayer(viewPlayer?.name === p.name ? null : p)}
+                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl border transition-all text-left ${
+                      isMe
+                        ? "border-[#FFD700]/40 bg-[#FFD700]/5"
+                        : "border-[#003F88] bg-[#002657] hover:border-[#7BA3D4]"
+                    }`}
+                  >
+                    {/* Rank */}
+                    <span className="text-xl w-7 text-center flex-shrink-0">
+                      {isTop3
+                        ? ["🥇","🥈","🥉"][i]
+                        : <span className="text-[#4A6B8A] text-sm font-bold">#{i+1}</span>
+                      }
+                    </span>
+
+                    {/* Flag */}
+                    <FlagImg iso={p.avatarFlag?.iso} size={24} className="rounded-sm flex-shrink-0" />
+
+                    {/* Name */}
+                    <span className={`font-bold flex-1 truncate text-sm ${isMe ? "text-[#FFD700]" : "text-white"}`}>
+                      {p.name}
+                      {isMe && <span className="text-[#4A6B8A] text-[10px] font-normal ml-1">(you)</span>}
+                    </span>
+
+                    {/* Score */}
+                    <div className="text-right flex-shrink-0">
+                      <p className={`font-black text-lg leading-tight ${isTop3 ? "text-[#FFD700]" : "text-white"}`}>
+                        {p.score} pts
+                      </p>
+                      <p className="text-[#4A6B8A] text-[9px]">{p.correct}/{p.total} correct</p>
+                    </div>
+
+                    <span className="text-[#4A6B8A] text-xs ml-1">{viewPlayer?.name === p.name ? "▲" : "▼"}</span>
+                  </button>
+
+                  {/* Expanded knockout picks */}
+                  {viewPlayer?.name === p.name && (
+                    <div className="bg-[#001E4A] border border-[#003F88] rounded-2xl p-4 mt-1">
+                      <div className="flex items-center gap-2 mb-3">
+                        <FlagImg iso={p.avatarFlag?.iso} size={24} className="rounded-sm" />
+                        <span className="text-white font-black text-sm">{p.name}'s Knockout Picks</span>
+                        <span className="ml-auto text-[#FFD700] font-black text-sm">{p.score} pts</span>
+                      </div>
+                      <KnockoutPicksRows
+                        predictions={p.knockoutPredictions || {}}
+                        knockoutResults={knockoutResults}
+                        knockoutTeams={knockoutTeams}
+                      />
+                    </div>
+                  )}
                 </div>
-                <span className="text-[#4A6B8A] text-xs ml-1">{viewPlayer?.name === p.name ? "▲" : "▼"}</span>
-              </button>
-              {viewPlayer?.name === p.name && (
-                <div className="bg-[#001E4A] border border-[#003F88] rounded-2xl p-4 mt-1">
-                  <div className="flex items-center gap-2 mb-3">
-                    <FlagImg iso={p.avatarFlag?.iso} size={24} className="rounded-sm" />
-                    <span className="text-white font-black text-sm">{p.name}'s Knockout Picks</span>
-                  </div>
-                  <KnockoutPicksRows
-                    predictions={p.knockoutPredictions || {}}
-                    knockoutResults={knockoutResults}
-                    knockoutTeams={knockoutTeams}
-                  />
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
+              );
+            })}
+          </div>
+        </>
       )}
     </>
   );
