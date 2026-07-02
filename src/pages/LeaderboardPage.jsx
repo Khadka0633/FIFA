@@ -635,7 +635,7 @@ function KnockoutLeaderboardTab({ leaderboard, player, myEntry, myRank, knockout
 
   return (
     <>
-      {/* ── CTA Banner ── */}
+      {/*  
       {!player?.isGuest && onGoKnockout && (
         <div className="mb-5 relative overflow-hidden bg-gradient-to-r from-[#FFD700]/20 via-[#FFD700]/10 to-[#FFD700]/20 border border-[#FFD700]/40 rounded-2xl px-5 py-4">
           <div className="absolute inset-0 opacity-5">
@@ -657,6 +657,7 @@ function KnockoutLeaderboardTab({ leaderboard, player, myEntry, myRank, knockout
           </div>
         </div>
       )}
+        */}
 
       {/* ── My rank card ── */}
       {myEntry && (
