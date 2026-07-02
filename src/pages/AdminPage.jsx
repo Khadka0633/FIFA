@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { GROUP_STAGE_MATCHES, GROUPS, getTeam } from "../data/matches";
-import { KNOCKOUT_MATCHES } from "../data/knockoutMatches";
+import { KNOCKOUT_MATCHES } from "../data/KnockoutMatches";
 import {
   setResult,
   getAllPlayers,
