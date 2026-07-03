@@ -635,7 +635,7 @@ function KnockoutLeaderboardTab({ leaderboard, player, myEntry, myRank, knockout
 
   return (
     <>
-      {/*  
+     
       {!player?.isGuest && onGoKnockout && (
         <div className="mb-5 relative overflow-hidden bg-gradient-to-r from-[#FFD700]/20 via-[#FFD700]/10 to-[#FFD700]/20 border border-[#FFD700]/40 rounded-2xl px-5 py-4">
           <div className="absolute inset-0 opacity-5">
@@ -646,7 +646,7 @@ function KnockoutLeaderboardTab({ leaderboard, player, myEntry, myRank, knockout
             <span className="text-4xl flex-shrink-0">🏆</span>
             <div className="flex-1 min-w-0">
               <p className="text-[#FFD700] font-black text-sm mb-0.5">Knockout predictions are open!</p>
-              <p className="text-[#7BA3D4] text-xs">Pick winners for each match as teams are confirmed.</p>
+              <p className="text-[#7BA3D4] text-xs">Pick teams for each match as teams are confirmed.</p>
             </div>
             <button
               onClick={onGoKnockout}
@@ -657,7 +657,7 @@ function KnockoutLeaderboardTab({ leaderboard, player, myEntry, myRank, knockout
           </div>
         </div>
       )}
-        */}
+        
 
       {/* ── My rank card ── */}
       {myEntry && (
