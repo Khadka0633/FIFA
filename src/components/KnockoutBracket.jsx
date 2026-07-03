@@ -30,7 +30,7 @@ const R32 = [
 const R16L = [
   {id:"R16_1", h:"PAR", a:"FRA", date:"Jul 5"},
   {id:"R16_2", h:"CAN", a:"MAR", date:"Jul 4"},
-  {id:"R16_3", h:"", a:"", date:"Jul 6"},
+  {id:"R16_3", h:"POR", a:"ESP", date:"Jul 6"},
   {id:"R16_4", h:"USA", a:"BEL", date:"Jul 7"},
 ];
 const R16R = [
