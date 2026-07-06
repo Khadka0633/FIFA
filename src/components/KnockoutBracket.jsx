@@ -36,17 +36,17 @@ const R16L = [
 const R16R = [
   {id:"R16_5", h:"BRA", a:"NOR", date:"Jul 5"},
   {id:"R16_6", h:"MEX", a:"ENG", date:"Jul 6"},
-  {id:"R16_7", h:"", a:"", date:"Jul 7"},
-  {id:"R16_8", h:"", a:"", date:"Jul 7"},
+  {id:"R16_7", h:"ARG", a:"EGY", date:"Jul 7"},
+  {id:"R16_8", h:"SUI", a:"COL", date:"Jul 7"},
 ];
 
 // ── QF — fill in as R16 completes ────────────────────────────────────────────
 const QFL = [
-  {id:"QF1", h:"TBD", a:"TBD", date:"Jul 9"},
+  {id:"QF1", h:"FRA", a:"MAR", date:"Jul 9"},
   {id:"QF2", h:"TBD", a:"TBD", date:"Jul 10"},
 ];
 const QFR = [
-  {id:"QF3", h:"TBD", a:"TBD", date:"Jul 12"},
+  {id:"QF3", h:"NOR", a:"ENG", date:"Jul 12"},
   {id:"QF4", h:"TBD", a:"TBD", date:"Jul 12"},
 ];
 
