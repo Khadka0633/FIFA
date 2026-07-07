@@ -43,7 +43,7 @@ const R16R = [
 // ── QF — fill in as R16 completes ────────────────────────────────────────────
 const QFL = [
   {id:"QF1", h:"FRA", a:"MAR", date:"Jul 9"},
-  {id:"QF2", h:"TBD", a:"TBD", date:"Jul 10"},
+  {id:"QF2", h:"ESP", a:"BEL", date:"Jul 10"},
 ];
 const QFR = [
   {id:"QF3", h:"NOR", a:"ENG", date:"Jul 12"},
