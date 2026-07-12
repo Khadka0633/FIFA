@@ -47,12 +47,12 @@ const QFL = [
 ];
 const QFR = [
   {id:"QF3", h:"NOR", a:"ENG", date:"Jul 12"},
-  {id:"QF4", h:"TBD", a:"TBD", date:"Jul 12"},
+  {id:"QF4", h:"ARG", a:"SUI", date:"Jul 12"},
 ];
 
 // ── SF ────────────────────────────────────────────────────────────────────────
-const SFL = [{id:"SF1", h:"TBD", a:"TBD", date:"Jul 14"}];
-const SFR = [{id:"SF2", h:"TBD", a:"TBD", date:"Jul 15"}];
+const SFL = [{id:"SF1", h:"FRA", a:"ESP", date:"Jul 14"}];
+const SFR = [{id:"SF2", h:"ENG", a:"ARG", date:"Jul 15"}];
 
 // ── Final & Bronze ────────────────────────────────────────────────────────────
 const FINAL  = {id:"F1", h:"TBD", a:"TBD", date:"Jul 19", badge:"final"};
