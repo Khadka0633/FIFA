@@ -21,11 +21,12 @@ export default function KnockoutPredictPage({ player, knockoutTeams = {}, onSubm
   }, []);
 
   // Hide R32 entirely — only show R16 and beyond
-  const VISIBLE_ROUNDS = ["R16", "QF", "SF", "Final"];
+  const VISIBLE_ROUNDS = ["R16", "QF", "SF","Bronze", "Final"];
   const roundLabels = {
     R16: "Round of 16",
     QF: "Quarter Finals",
     SF: "Semi Finals",
+    Bronze: "3rd Place",
     Final: "Final",
   };
 

@@ -55,8 +55,8 @@ const SFL = [{id:"SF1", h:"FRA", a:"ESP", date:"Jul 14"}];
 const SFR = [{id:"SF2", h:"ENG", a:"ARG", date:"Jul 15"}];
 
 // ── Final & Bronze ────────────────────────────────────────────────────────────
-const FINAL  = {id:"F1", h:"TBD", a:"TBD", date:"Jul 19", badge:"final"};
-const BRONZE = {id:"B1", h:"TBD", a:"TBD", date:"Jul 19", badge:"bronze"};
+const FINAL  = {id:"F1", h:"ESP", a:"ARG", date:"Jul 19", badge:"final"};
+const BRONZE = {id:"B1", h:"FRA", a:"ENG", date:"Jul 19", badge:"bronze"};
 
 // ── Team row ──────────────────────────────────────────────────────────────────
 function TeamRow({ code, isWinner, isLoser, score }) {
